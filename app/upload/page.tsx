@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { ocrFromImage } from "@/lib/ocr-client";
@@ -79,67 +79,118 @@ export default function UploadPage() {
   };
 
   return (
-    <div className="container mx-auto p-6 max-w-2xl">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Upload Match</h1>
-        <Link
-          href="/dashboard"
-          className="px-4 py-2 bg-secondary text-secondary-foreground rounded hover:bg-secondary/80"
-        >
-          Back to Dashboard
-        </Link>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Upload Screenshot</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
+      <div className="container mx-auto p-6 max-w-3xl">
+        <div className="flex justify-between items-center mb-8">
           <div>
-            <Label htmlFor="file">Select Image</Label>
-            <input
-              id="file"
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-              className="mt-2 block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
-            />
+            <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent">
+              Upload Match
+            </h1>
+            <p className="text-muted-foreground">Process your match screenshots</p>
           </div>
+          <Link
+            href="/dashboard"
+            className="px-6 py-2.5 bg-secondary hover:bg-secondary/80 border border-border rounded-lg transition-all duration-200 hover:scale-105"
+          >
+            Back to Dashboard
+          </Link>
+        </div>
 
-          {file && (
-            <div>
-              <p className="text-sm text-muted-foreground">
-                Selected: {file.name}
-              </p>
-              <Button
-                onClick={handleUpload}
-                disabled={uploading}
-                className="mt-2"
-              >
-                {uploading ? "Uploading..." : "Upload & OCR"}
-              </Button>
+        <Card className="card-glow border-primary/20 bg-card/50 backdrop-blur-sm">
+          <CardHeader>
+            <CardTitle className="text-2xl">Match Screenshot</CardTitle>
+            <CardDescription>
+              Upload a screenshot from your MLBB match results screen
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="file" className="text-base font-semibold">
+                Select Image File
+              </Label>
+              <div className="relative">
+                <input
+                  id="file"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="block w-full text-sm text-muted-foreground file:mr-4 file:py-3 file:px-6 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 file:cursor-pointer file:transition-colors cursor-pointer"
+                />
+              </div>
             </div>
-          )}
 
-          {ocrText && (
-            <div className="mt-4">
-              <Label>OCR Preview</Label>
-              <textarea
-                readOnly
-                value={ocrText}
-                className="mt-2 w-full p-2 border rounded-md min-h-[200px] bg-muted"
-              />
-              <Button
-                onClick={handleParse}
-                disabled={parsing}
-                className="mt-2"
-              >
-                {parsing ? "Parsing..." : "Save Match"}
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            {file && (
+              <div className="p-4 rounded-lg bg-muted/30 border border-primary/20">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <p className="font-medium text-sm">Selected File</p>
+                    <p className="text-sm text-muted-foreground">{file.name}</p>
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {(file.size / 1024 / 1024).toFixed(2)} MB
+                  </span>
+                </div>
+                <Button
+                  onClick={handleUpload}
+                  disabled={uploading}
+                  className="w-full gaming-gradient hover:opacity-90 transition-opacity"
+                >
+                  {uploading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <span className="animate-spin">⟳</span>
+                      Processing OCR...
+                    </span>
+                  ) : (
+                    "Process Image"
+                  )}
+                </Button>
+              </div>
+            )}
+
+            {ocrText && (
+              <div className="space-y-4 p-4 rounded-lg bg-muted/20 border border-border">
+                <div>
+                  <Label className="text-base font-semibold mb-2 block">
+                    OCR Preview
+                  </Label>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Review the extracted text before saving
+                  </p>
+                  <textarea
+                    readOnly
+                    value={ocrText}
+                    className="w-full p-4 border border-border rounded-lg min-h-[200px] bg-background text-foreground font-mono text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    placeholder="OCR text will appear here..."
+                  />
+                </div>
+                <Button
+                  onClick={handleParse}
+                  disabled={parsing}
+                  className="w-full gaming-gradient hover:opacity-90 transition-opacity"
+                >
+                  {parsing ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <span className="animate-spin">⟳</span>
+                      Saving Match...
+                    </span>
+                  ) : (
+                    "Save Match"
+                  )}
+                </Button>
+              </div>
+            )}
+
+            {!file && (
+              <div className="p-6 rounded-lg bg-muted/20 border border-dashed border-border text-center">
+                <div className="text-4xl mb-3 opacity-50">📸</div>
+                <p className="text-sm text-muted-foreground">
+                  Select a match screenshot to get started
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
