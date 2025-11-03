@@ -51,7 +51,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto p-6 max-w-4xl">
         <div className="flex justify-between items-center mb-8">
           <div>
@@ -137,7 +137,7 @@ export default function SettingsPage() {
                   <Button
                     onClick={handleRecompute}
                     disabled={recomputing}
-                    className="gaming-gradient text-white transition-all duration-200 hover:scale-[1.01]"
+                    className="bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
                   >
                     {recomputing ? (
                       <span className="flex items-center gap-2">

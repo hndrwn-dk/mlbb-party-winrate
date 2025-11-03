@@ -74,7 +74,7 @@ export default function FriendDetailPage() {
 
   if (loadingDetail || loadingPrediction) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
           <p className="text-muted-foreground">Loading teammate data...</p>
@@ -85,13 +85,13 @@ export default function FriendDetailPage() {
 
   if (!friendDetail) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl font-bold mb-2">Teammate Not Found</h2>
           <p className="text-muted-foreground mb-4">This teammate doesn&apos;t exist or has been removed</p>
           <Link
             href="/dashboard"
-            className="inline-block px-6 py-3 gaming-gradient text-white rounded-lg font-semibold transition-all duration-200 hover:scale-[1.02]"
+            className="inline-block px-6 py-3 bg-primary text-primary-foreground rounded-lg font-semibold hover:bg-primary/90 transition-colors"
           >
             Back to Dashboard
           </Link>
@@ -103,7 +103,7 @@ export default function FriendDetailPage() {
   const stats = friendDetail.friend.stats;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto p-6 max-w-6xl">
         <div className="flex justify-between items-center mb-8">
           <div>

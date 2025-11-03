@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { ocrFromImage } from "@/lib/ocr-client";
@@ -14,7 +14,33 @@ export default function UploadPage() {
   const [ocrText, setOcrText] = useState<string | null>(null);
   const [parsing, setParsing] = useState(false);
   const [uploadId, setUploadId] = useState<string | null>(null);
+  const [dragActive, setDragActive] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const droppedFile = e.dataTransfer.files[0];
+      if (droppedFile.type.startsWith("image/")) {
+        setFile(droppedFile);
+        setOcrText(null);
+      }
+    }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -78,114 +104,170 @@ export default function UploadPage() {
     }
   };
 
+  const handleRemoveFile = () => {
+    setFile(null);
+    setOcrText(null);
+    setUploadId(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const getFileExtension = (filename: string) => {
+    return filename.split(".").pop()?.toUpperCase() || "";
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(2) + " MB";
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto p-6 max-w-3xl">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-4xl font-bold mb-2 text-foreground tracking-tight">
-              Upload Match
-            </h1>
-            <p className="text-muted-foreground">Process your match screenshots</p>
-          </div>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-semibold text-foreground">Upload Files</h1>
           <Link
             href="/dashboard"
-            className="px-6 py-2.5 bg-secondary hover:bg-secondary/80 border border-border rounded-lg transition-all duration-200 hover:scale-105"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             Back to Dashboard
           </Link>
         </div>
 
-        <Card className="card-glow border-primary/20 bg-card/50 backdrop-blur-sm">
+        <Card className="card-glow">
           <CardHeader>
-            <CardTitle className="text-2xl">Match Screenshot</CardTitle>
-            <CardDescription>
-              Upload a screenshot from your MLBB match results screen
-            </CardDescription>
+            <CardTitle className="text-xl font-semibold">Upload Files</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="file" className="text-base font-semibold">
-                Select Image File
-              </Label>
-              <div className="relative">
-                <input
-                  id="file"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="block w-full text-sm text-muted-foreground file:mr-4 file:py-3 file:px-6 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 file:cursor-pointer file:transition-colors cursor-pointer"
-                />
+            <div
+              onDragEnter={handleDrag}
+              onDragLeave={handleDrag}
+              onDragOver={handleDrag}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+              className={`
+                border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-colors
+                ${dragActive 
+                  ? "border-primary bg-muted" 
+                  : "border-border bg-background hover:border-primary/50"
+                }
+              `}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+              <div className="flex flex-col items-center gap-4">
+                <div className="w-16 h-16 rounded-full border-2 border-foreground/20 flex items-center justify-center">
+                  <span className="text-3xl font-light text-foreground/60">+</span>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground mb-1">
+                    Drag & drop or click to choose files
+                  </p>
+                  <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
+                    <span>ⓘ</span>
+                    <span>Max file size: 10 MB</span>
+                  </div>
+                </div>
               </div>
             </div>
 
             {file && (
-              <div className="p-4 rounded-lg bg-muted/30 border border-primary/20">
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <p className="font-medium text-sm">Selected File</p>
-                    <p className="text-sm text-muted-foreground">{file.name}</p>
+              <div className="rounded-lg bg-secondary p-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded bg-chart-1 flex items-center justify-center flex-shrink-0">
+                    <span className="text-white font-semibold text-sm">
+                      {getFileExtension(file.name)}
+                    </span>
                   </div>
-                  <span className="text-xs text-muted-foreground">
-                    {(file.size / 1024 / 1024).toFixed(2)} MB
-                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm text-foreground truncate">
+                      {file.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {getFileExtension(file.name).toLowerCase()} | {formatFileSize(file.size)}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      onClick={handleUpload}
+                      disabled={uploading}
+                      className="h-8 w-8 rounded-full bg-muted hover:bg-muted/80 p-0"
+                      variant="ghost"
+                    >
+                      <span className="text-sm">↓</span>
+                    </Button>
+                    <Button
+                      onClick={handleRemoveFile}
+                      className="h-8 w-8 rounded-full bg-muted hover:bg-muted/80 p-0"
+                      variant="ghost"
+                    >
+                      <span className="text-sm">🗑</span>
+                    </Button>
+                  </div>
                 </div>
+
+                {!ocrText && (
                   <Button
                     onClick={handleUpload}
                     disabled={uploading}
-                    className="w-full gaming-gradient text-white transition-all duration-200 hover:scale-[1.01]"
+                    className="w-full mt-4 bg-primary text-primary-foreground hover:bg-primary/90"
                   >
-                  {uploading ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <span className="animate-spin">⟳</span>
-                      Processing OCR...
-                    </span>
-                  ) : (
-                    "Process Image"
-                  )}
-                </Button>
+                    {uploading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <span className="animate-spin">⟳</span>
+                        Processing OCR...
+                      </span>
+                    ) : (
+                      "Process Image"
+                    )}
+                  </Button>
+                )}
               </div>
             )}
 
             {ocrText && (
-              <div className="space-y-4 p-4 rounded-lg bg-muted/20 border border-border">
-                <div>
-                  <Label className="text-base font-semibold mb-2 block">
+              <div className="space-y-4">
+                <div className="rounded-lg border border-border p-4">
+                  <Label className="text-sm font-semibold mb-2 block">
                     OCR Preview
                   </Label>
-                  <p className="text-xs text-muted-foreground mb-2">
-                    Review the extracted text before saving
-                  </p>
                   <textarea
                     readOnly
                     value={ocrText}
-                    className="w-full p-4 border border-border rounded-lg min-h-[200px] bg-background text-foreground font-mono text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    className="w-full p-3 border border-border rounded-lg min-h-[150px] bg-background text-foreground font-mono text-xs resize-none focus:outline-none"
                     placeholder="OCR text will appear here..."
                   />
                 </div>
-                <Button
-                  onClick={handleParse}
-                  disabled={parsing}
-                  className="w-full gaming-gradient text-white transition-all duration-200 hover:scale-[1.01]"
-                >
-                  {parsing ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <span className="animate-spin">⟳</span>
-                      Saving Match...
-                    </span>
-                  ) : (
-                    "Save Match"
-                  )}
-                </Button>
-              </div>
-            )}
-
-            {!file && (
-              <div className="p-6 rounded-lg bg-muted/20 border border-dashed border-border text-center">
-                <div className="text-4xl mb-3 opacity-50">📸</div>
-                <p className="text-sm text-muted-foreground">
-                  Select a match screenshot to get started
-                </p>
+                <div className="flex gap-3">
+                  <Button
+                    onClick={handleParse}
+                    disabled={parsing}
+                    className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
+                  >
+                    {parsing ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <span className="animate-spin">⟳</span>
+                        Saving Match...
+                      </span>
+                    ) : (
+                      "Save Match"
+                    )}
+                  </Button>
+                  <Button
+                    onClick={handleRemoveFile}
+                    variant="outline"
+                    className="px-4"
+                  >
+                    Remove file
+                  </Button>
+                </div>
               </div>
             )}
           </CardContent>
