@@ -6,25 +6,25 @@
   :root {
     --font-poppins: var(--font-poppins);
     --font-inter: var(--font-inter);
-    --background: 195 85% 15%;
-    --foreground: 0 0% 100%;
-    --card: 195 85% 15%;
-    --card-foreground: 0 0% 100%;
-    --popover: 195 85% 15%;
-    --popover-foreground: 0 0% 100%;
+    --background: 0 0% 100%;
+    --foreground: 195 85% 15%;
+    --card: 0 0% 100%;
+    --card-foreground: 195 85% 15%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 195 85% 15%;
     --primary: 195 85% 20%;
     --primary-foreground: 54 100% 50%;
-    --secondary: 195 70% 25%;
-    --secondary-foreground: 0 0% 100%;
-    --muted: 195 60% 20%;
-    --muted-foreground: 195 20% 70%;
+    --secondary: 195 20% 95%;
+    --secondary-foreground: 195 85% 15%;
+    --muted: 195 15% 96%;
+    --muted-foreground: 195 30% 45%;
     --accent: 54 100% 50%;
     --accent-foreground: 195 85% 15%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --border: 195 60% 25%;
-    --input: 195 60% 25%;
-    --ring: 54 100% 50%;
+    --border: 195 20% 90%;
+    --input: 195 20% 90%;
+    --ring: 195 85% 20%;
     --radius: 0.75rem;
     --chart-1: 54 100% 50%;
     --chart-2: 15 85% 60%;
@@ -40,13 +40,13 @@
   }
   body {
     @apply bg-background text-foreground;
-    background-image: radial-gradient(at 27% 37%, hsla(195, 85%, 25%, 0.15) 0px, transparent 50%),
-      radial-gradient(at 97% 21%, hsla(54, 100%, 50%, 0.08) 0px, transparent 50%),
-      radial-gradient(at 52% 99%, hsla(195, 85%, 25%, 0.15) 0px, transparent 50%),
-      radial-gradient(at 10% 29%, hsla(54, 100%, 50%, 0.08) 0px, transparent 50%),
-      radial-gradient(at 97% 96%, hsla(195, 85%, 25%, 0.15) 0px, transparent 50%),
-      radial-gradient(at 33% 50%, hsla(195, 70%, 30%, 0.12) 0px, transparent 50%),
-      radial-gradient(at 79% 53%, hsla(54, 100%, 50%, 0.08) 0px, transparent 50%);
+    background-image: radial-gradient(at 27% 37%, hsla(195, 85%, 25%, 0.03) 0px, transparent 50%),
+      radial-gradient(at 97% 21%, hsla(54, 100%, 50%, 0.02) 0px, transparent 50%),
+      radial-gradient(at 52% 99%, hsla(195, 85%, 25%, 0.03) 0px, transparent 50%),
+      radial-gradient(at 10% 29%, hsla(54, 100%, 50%, 0.02) 0px, transparent 50%),
+      radial-gradient(at 97% 96%, hsla(195, 85%, 25%, 0.03) 0px, transparent 50%),
+      radial-gradient(at 33% 50%, hsla(195, 70%, 30%, 0.02) 0px, transparent 50%),
+      radial-gradient(at 79% 53%, hsla(54, 100%, 50%, 0.02) 0px, transparent 50%);
   }
 }
 
@@ -55,7 +55,7 @@
     background: linear-gradient(135deg, hsl(195 85% 20%) 0%, hsl(54 100% 50%) 100%);
   }
   .card-glow {
-    box-shadow: 0 0 20px rgba(34, 197, 94, 0.15), 0 0 40px rgba(255, 234, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 0 20px rgba(26, 95, 122, 0.08), 0 0 40px rgba(255, 234, 0, 0.05), 0 2px 8px rgba(0, 0, 0, 0.08);
   }
   .text-glow {
     text-shadow: 0 0 10px rgba(255, 234, 0, 0.5);
