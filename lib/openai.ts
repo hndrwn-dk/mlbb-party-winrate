@@ -148,7 +148,10 @@ Return JSON ONLY per the provided schema with short, practical tips and 2-3 hero
     temperature: 0.7,
   });
 
-  const parsed = completion.choices[0]?.message?.parsed as OpenAIResponse;
+  const parsed = completion.choices[0]?.message?.parsed as
+    | OpenAIResponse
+    | null
+    | undefined;
 
   if (!parsed) {
     throw new Error("Failed to parse OpenAI response");
