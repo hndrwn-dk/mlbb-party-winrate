@@ -6,8 +6,8 @@ import { Providers } from "./providers";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "MLBB Party Winrate Predictor",
-  description: "Predict duo win probability from MLBB match screenshots",
+  title: "MLBB Party Winrate | Mobile Legends Bang Bang",
+  description: "Predict duo win probability from MLBB match screenshots. Track teammates and optimize your party winrate.",
   icons: {
     icon: "/favicon.ico",
     shortcut: "/favicon.ico",

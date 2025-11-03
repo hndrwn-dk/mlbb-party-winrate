@@ -66,10 +66,10 @@ export default function DashboardPage() {
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-5xl font-bold mb-2 bg-gradient-to-r from-primary via-chart-2 to-primary bg-clip-text text-transparent">
-              Duo Dashboard
+              MLBB Party Winrate
             </h1>
             <p className="text-muted-foreground text-lg">
-              Track your teammates and optimize your winrate
+              Track your teammates and optimize your duo performance
             </p>
           </div>
           <nav className="flex gap-3">
