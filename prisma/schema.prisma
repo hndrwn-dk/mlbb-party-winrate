@@ -1,0 +1,100 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id              String   @id @default(cuid())
+  email           String?  @unique
+  createdAt       DateTime @default(now())
+  enableServerOCR Boolean  @default(false)
+  friends         Friend[]
+  matches         Match[]  @relation("UserMatches")
+  uploads         Upload[]
+  models          ModelFit[]
+}
+
+model Friend {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  gameUserId  String
+  displayName String?
+  createdAt   DateTime @default(now())
+  stats       FriendStats?
+  matches     MatchPlayer[]
+  @@unique([userId, gameUserId])
+}
+
+model Match {
+  id              String   @id @default(cuid())
+  ownerId         String
+  owner           User     @relation("UserMatches", fields: [ownerId], references: [id])
+  matchExternalId String?
+  playedAt        DateTime
+  mode            String?
+  result          String
+  partySize       Int?
+  createdAt       DateTime @default(now())
+  players         MatchPlayer[]
+  source          String
+}
+
+model MatchPlayer {
+  id           String  @id @default(cuid())
+  matchId      String
+  match        Match   @relation(fields: [matchId], references: [id])
+  friendId     String?
+  friend       Friend? @relation(fields: [friendId], references: [id])
+  isOwnerParty Boolean @default(false)
+
+  gameUserId String
+  hero       String?
+  k          Int?
+  d          Int?
+  a          Int?
+  gpm        Int?
+  dmgDealt   Int?
+  dmgTaken   Int?
+}
+
+model Upload {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  url        String
+  processed  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  ocrEngine  String?
+  parseNotes String?
+}
+
+model FriendStats {
+  id             String   @id @default(cuid())
+  friendId       String   @unique
+  friend         Friend   @relation(fields: [friendId], references: [id])
+  gamesTogether  Int      @default(0)
+  winsTogether   Int      @default(0)
+  avgK           Float    @default(0)
+  avgD           Float    @default(0)
+  avgA           Float    @default(0)
+  synergyScore   Float    @default(0)
+  confidence     Float    @default(0)
+  synergyJSON    Json?
+  lastComputedAt DateTime @default(now())
+}
+
+model ModelFit {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  fittedAt  DateTime @default(now())
+  intercept Float
+  coef      Json
+  features  String[]
+  samples   Int
+}
