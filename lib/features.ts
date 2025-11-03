@@ -1,6 +1,6 @@
 import { Friend, FriendStats, Match, MatchPlayer } from "@prisma/client";
 
-interface FeatureVector {
+export interface FeatureVector {
   wrTogether: number;
   friendKdaLast3: number;
   deathsGap: number;
