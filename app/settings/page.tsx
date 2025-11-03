@@ -87,7 +87,7 @@ export default function SettingsPage() {
                   </div>
                   <p className="text-sm text-muted-foreground leading-relaxed">
                     Processing happens directly in your browser using Tesseract.js. 
-                    This method is faster, more private, and doesn't use server resources. 
+                    This method is faster, more private, and doesn&apos;t use server resources. 
                     Your screenshots never leave your device until after processing.
                   </p>
                 </div>

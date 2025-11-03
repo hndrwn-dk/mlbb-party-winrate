@@ -88,7 +88,7 @@ export default function FriendDetailPage() {
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20 flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl font-bold mb-2">Teammate Not Found</h2>
-          <p className="text-muted-foreground mb-4">This teammate doesn't exist or has been removed</p>
+          <p className="text-muted-foreground mb-4">This teammate doesn&apos;t exist or has been removed</p>
           <Link
             href="/dashboard"
             className="inline-block px-6 py-3 gaming-gradient text-white rounded-lg font-semibold hover:opacity-90 transition-opacity"
@@ -157,7 +157,7 @@ export default function FriendDetailPage() {
                     <p className="text-sm leading-relaxed">{prediction.summary}</p>
                     {prediction.funCaption && (
                       <p className="text-sm italic text-primary/80 mt-3 font-medium">
-                        "{prediction.funCaption}"
+                        &ldquo;{prediction.funCaption}&rdquo;
                       </p>
                     )}
                   </div>
