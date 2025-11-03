@@ -46,10 +46,6 @@ function extractKDA(text: string): { k: number; d: number; a: number } | null {
   return null;
 }
 
-function extractNumber(text: string): number | undefined {
-  const numMatch = text.match(/\d+/);
-  return numMatch ? parseInt(numMatch[0], 10) : undefined;
-}
 
 export function parseScoreboard(rawText: string): ParsedMatch | null {
   const lines = rawText
@@ -65,7 +61,6 @@ export function parseScoreboard(rawText: string): ParsedMatch | null {
   const ownerPartyIndices: number[] = [];
   let result: "win" | "lose" | null = null;
   let mode: string | undefined;
-  let partySize: number | undefined;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].toLowerCase();
@@ -141,7 +136,7 @@ export function parseScoreboard(rawText: string): ParsedMatch | null {
     return null;
   }
 
-  partySize = ownerPartyIndices.length;
+  const partySize = ownerPartyIndices.length;
 
   return {
     result,

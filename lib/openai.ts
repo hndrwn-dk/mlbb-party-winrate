@@ -142,7 +142,7 @@ Return JSON ONLY per the provided schema with short, practical tips and 2-3 hero
       json_schema: {
         name: "duo_coach_response",
         strict: true,
-        schema: JSON_SCHEMA as any,
+        schema: JSON_SCHEMA as Record<string, unknown>,
       },
     },
     temperature: 0.7,

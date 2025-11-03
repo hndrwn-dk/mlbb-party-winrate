@@ -2,12 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireUserId } from "@/lib/guard";
 import { uploadBlob } from "@/lib/blob";
 import { prisma } from "@/lib/prisma";
-import { z } from "zod";
-
-const UploadSchema = z.object({
-  file: z.instanceof(File),
-});
-
 export async function POST(request: NextRequest) {
   try {
     const userId = await requireUserId();
