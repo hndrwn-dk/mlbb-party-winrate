@@ -10,22 +10,22 @@
     --card-foreground: 213 31% 91%;
     --popover: 224 71% 4%;
     --popover-foreground: 213 31% 91%;
-    --primary: 142 76% 36%;
-    --primary-foreground: 355 100% 97%;
-    --secondary: 215 28% 17%;
+    --primary: 271 91% 35%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 271 65% 25%;
     --secondary-foreground: 213 31% 91%;
     --muted: 215 28% 17%;
     --muted-foreground: 217 10% 64%;
-    --accent: 217 33% 17%;
+    --accent: 271 75% 30%;
     --accent-foreground: 213 31% 91%;
     --destructive: 0 63% 31%;
     --destructive-foreground: 213 31% 91%;
     --border: 215 28% 17%;
     --input: 215 28% 17%;
-    --ring: 142 76% 36%;
+    --ring: 271 91% 35%;
     --radius: 0.75rem;
-    --chart-1: 142 76% 36%;
-    --chart-2: 173 58% 39%;
+    --chart-1: 271 91% 35%;
+    --chart-2: 271 65% 25%;
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
@@ -38,24 +38,24 @@
   }
   body {
     @apply bg-background text-foreground;
-    background-image: radial-gradient(at 27% 37%, hsla(215, 98%, 61%, 0.08) 0px, transparent 50%),
-      radial-gradient(at 97% 21%, hsla(142, 98%, 72%, 0.08) 0px, transparent 50%),
-      radial-gradient(at 52% 99%, hsla(215, 98%, 61%, 0.08) 0px, transparent 50%),
-      radial-gradient(at 10% 29%, hsla(142, 98%, 72%, 0.08) 0px, transparent 50%),
-      radial-gradient(at 97% 96%, hsla(215, 98%, 61%, 0.08) 0px, transparent 50%),
-      radial-gradient(at 33% 50%, hsla(142, 98%, 72%, 0.08) 0px, transparent 50%),
-      radial-gradient(at 79% 53%, hsla(215, 98%, 61%, 0.08) 0px, transparent 50%);
+    background-image: radial-gradient(at 27% 37%, hsla(271, 91%, 35%, 0.12) 0px, transparent 50%),
+      radial-gradient(at 97% 21%, hsla(271, 65%, 25%, 0.12) 0px, transparent 50%),
+      radial-gradient(at 52% 99%, hsla(271, 91%, 35%, 0.12) 0px, transparent 50%),
+      radial-gradient(at 10% 29%, hsla(271, 65%, 25%, 0.12) 0px, transparent 50%),
+      radial-gradient(at 97% 96%, hsla(271, 91%, 35%, 0.12) 0px, transparent 50%),
+      radial-gradient(at 33% 50%, hsla(271, 75%, 30%, 0.12) 0px, transparent 50%),
+      radial-gradient(at 79% 53%, hsla(271, 91%, 35%, 0.12) 0px, transparent 50%);
   }
 }
 
 @layer utilities {
   .gaming-gradient {
-    background: linear-gradient(135deg, hsl(142 76% 36%) 0%, hsl(173 58% 39%) 100%);
+    background: linear-gradient(135deg, hsl(271 91% 35%) 0%, hsl(271 65% 25%) 100%);
   }
   .card-glow {
-    box-shadow: 0 0 20px rgba(34, 197, 94, 0.1), 0 4px 6px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 0 20px rgba(106, 13, 173, 0.2), 0 4px 6px rgba(0, 0, 0, 0.3);
   }
   .text-glow {
-    text-shadow: 0 0 10px rgba(34, 197, 94, 0.5);
+    text-shadow: 0 0 10px rgba(106, 13, 173, 0.6);
   }
 }
