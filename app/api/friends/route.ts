@@ -38,6 +38,17 @@ export async function GET() {
     return NextResponse.json(result);
   } catch (error) {
     console.error("Friends error:", error);
-    return NextResponse.json({ error: "Failed to fetch friends" }, { status: 500 });
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    
+    return NextResponse.json(
+      {
+        error: "Failed to fetch friends",
+        message: errorMessage,
+        ...(process.env.NODE_ENV === "development" && { stack: errorStack }),
+      },
+      { status: 500 }
+    );
   }
 }
