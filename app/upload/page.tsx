@@ -83,7 +83,7 @@ export default function UploadPage() {
       <div className="container mx-auto p-6 max-w-3xl">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent">
+            <h1 className="text-4xl font-bold mb-2 text-foreground tracking-tight">
               Upload Match
             </h1>
             <p className="text-muted-foreground">Process your match screenshots</p>
@@ -130,11 +130,11 @@ export default function UploadPage() {
                     {(file.size / 1024 / 1024).toFixed(2)} MB
                   </span>
                 </div>
-                <Button
-                  onClick={handleUpload}
-                  disabled={uploading}
-                  className="w-full gaming-gradient hover:opacity-90 transition-opacity"
-                >
+                  <Button
+                    onClick={handleUpload}
+                    disabled={uploading}
+                    className="w-full gaming-gradient text-white transition-all duration-200 hover:scale-[1.01]"
+                  >
                   {uploading ? (
                     <span className="flex items-center justify-center gap-2">
                       <span className="animate-spin">⟳</span>
@@ -166,7 +166,7 @@ export default function UploadPage() {
                 <Button
                   onClick={handleParse}
                   disabled={parsing}
-                  className="w-full gaming-gradient hover:opacity-90 transition-opacity"
+                  className="w-full gaming-gradient text-white transition-all duration-200 hover:scale-[1.01]"
                 >
                   {parsing ? (
                     <span className="flex items-center justify-center gap-2">

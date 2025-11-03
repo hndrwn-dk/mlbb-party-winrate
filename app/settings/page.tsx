@@ -55,7 +55,7 @@ export default function SettingsPage() {
       <div className="container mx-auto p-6 max-w-4xl">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent">
+            <h1 className="text-4xl font-bold mb-2 text-foreground tracking-tight">
               Settings
             </h1>
             <p className="text-muted-foreground">Configure your winrate predictor</p>
@@ -137,7 +137,7 @@ export default function SettingsPage() {
                   <Button
                     onClick={handleRecompute}
                     disabled={recomputing}
-                    className="gaming-gradient hover:opacity-90 transition-opacity"
+                    className="gaming-gradient text-white transition-all duration-200 hover:scale-[1.01]"
                   >
                     {recomputing ? (
                       <span className="flex items-center gap-2">

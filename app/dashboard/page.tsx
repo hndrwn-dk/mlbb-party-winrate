@@ -65,7 +65,7 @@ export default function DashboardPage() {
       <div className="container mx-auto p-6 max-w-7xl">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-5xl font-bold mb-2 bg-gradient-to-r from-primary via-chart-2 to-primary bg-clip-text text-transparent">
+            <h1 className="text-5xl font-bold mb-2 text-foreground tracking-tight">
               MLBB Party Winrate
             </h1>
             <p className="text-muted-foreground text-lg">
@@ -75,7 +75,7 @@ export default function DashboardPage() {
           <nav className="flex gap-3">
             <Link
               href="/upload"
-              className="px-6 py-3 gaming-gradient text-white rounded-lg font-semibold hover:opacity-90 transition-all duration-200 hover:scale-105 shadow-lg"
+              className="px-6 py-3 gaming-gradient text-white rounded-lg font-semibold transition-all duration-200 hover:scale-[1.02]"
             >
               Upload Match
             </Link>
@@ -98,7 +98,7 @@ export default function DashboardPage() {
               </p>
               <Link
                 href="/upload"
-                className="inline-block px-6 py-3 gaming-gradient text-white rounded-lg font-semibold hover:opacity-90 transition-opacity"
+                className="inline-block px-6 py-3 gaming-gradient text-white rounded-lg font-semibold transition-all duration-200 hover:scale-[1.02]"
               >
                 Upload Match →
               </Link>

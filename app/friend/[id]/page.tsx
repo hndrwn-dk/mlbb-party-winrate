@@ -91,7 +91,7 @@ export default function FriendDetailPage() {
           <p className="text-muted-foreground mb-4">This teammate doesn&apos;t exist or has been removed</p>
           <Link
             href="/dashboard"
-            className="inline-block px-6 py-3 gaming-gradient text-white rounded-lg font-semibold hover:opacity-90 transition-opacity"
+            className="inline-block px-6 py-3 gaming-gradient text-white rounded-lg font-semibold transition-all duration-200 hover:scale-[1.02]"
           >
             Back to Dashboard
           </Link>
@@ -107,7 +107,7 @@ export default function FriendDetailPage() {
       <div className="container mx-auto p-6 max-w-6xl">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent">
+            <h1 className="text-4xl font-bold mb-2 text-foreground tracking-tight">
               {friendDetail.friend.displayName || friendDetail.friend.gameUserId}
             </h1>
             {friendDetail.friend.displayName && (
