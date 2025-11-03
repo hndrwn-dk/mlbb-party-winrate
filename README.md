@@ -40,7 +40,12 @@ pnpm install
 Create `.env.local`:
 
 ```env
+# For Vercel Postgres, use POSTGRES_PRISMA_URL (auto-added by Vercel)
+# Or use your own PostgreSQL connection string
 DATABASE_URL=postgresql://user:password@host:port/database
+# Or if using Vercel Postgres:
+# DATABASE_URL=$POSTGRES_PRISMA_URL
+
 OPENAI_API_KEY=sk-...
 BLOB_READ_WRITE_TOKEN=vercel_blob_rw_...
 NEXTAUTH_SECRET=dev-secret-or-random-string
@@ -48,6 +53,8 @@ NEXTAUTH_URL=http://localhost:3000
 ENABLE_SERVER_OCR=false
 APP_BASE_URL=http://localhost:3000
 ```
+
+**Note**: If using Vercel Postgres, Vercel automatically provides `POSTGRES_PRISMA_URL` which you can use directly for `DATABASE_URL`.
 
 ### 3. Set Up Database
 
@@ -230,6 +237,116 @@ Tests cover:
 - `tests/parse.test.ts`: OCR parsing logic
 - `tests/baseline.test.ts`: Baseline prediction logic
 
+## Setting Up Vercel Services
+
+### Setting Up Vercel Postgres Database
+
+#### Option 1: Via Vercel Dashboard
+
+1. **Go to your Vercel project dashboard**
+   - Navigate to [Vercel Dashboard](https://vercel.com/dashboard)
+   - Select your project
+
+2. **Open the Storage tab**
+   - Click on the **Storage** tab in your project
+   - Click **Create Database**
+   - Select **Postgres**
+
+3. **Create Postgres Database**
+   - Click **Create**
+   - Give your database a name (e.g., `mlbb-party-db`)
+   - Select a region closest to your users
+   - Click **Create Database**
+
+4. **Get Connection String**
+   - Once created, go to the **Settings** tab of your database
+   - Copy the **Connection String** (Postgres format)
+   - It should look like: `postgres://default:password@host:5432/verceldb?sslmode=require`
+   - This will be your `DATABASE_URL`
+
+5. **Auto-configured Environment Variable**
+   - Vercel automatically adds `POSTGRES_PRISMA_URL` and `POSTGRES_URL_NON_POOLING`
+   - For Prisma, use `POSTGRES_PRISMA_URL` as your `DATABASE_URL`
+   - Or manually set `DATABASE_URL` using the connection string from step 4
+
+#### Option 2: Via Vercel CLI
+
+```bash
+# Install Vercel CLI if you haven't
+npm i -g vercel
+
+# Login to Vercel
+vercel login
+
+# Link your project
+vercel link
+
+# Create Postgres database
+vercel storage create postgres --name mlbb-party-db
+```
+
+### Setting Up Vercel Blob Storage
+
+#### Step 1: Create Blob Store
+
+1. **Go to your Vercel project dashboard**
+   - Navigate to [Vercel Dashboard](https://vercel.com/dashboard)
+   - Select your project
+
+2. **Open the Storage tab**
+   - Click on the **Storage** tab
+   - Click **Create Database**
+   - Select **Blob**
+
+3. **Create Blob Store**
+   - Click **Create**
+   - Give your store a name (e.g., `mlbb-uploads`)
+   - Select a region
+   - Click **Create**
+
+#### Step 2: Get Blob Token
+
+1. **Access Blob Settings**
+   - Go to your Blob store's **Settings** tab
+   - Scroll to **Tokens** section
+
+2. **Create Read-Write Token**
+   - Click **Create Token**
+   - Name it (e.g., `production-rw-token`)
+   - Select **Read and Write** permissions
+   - Click **Create Token**
+
+3. **Copy the Token**
+   - **Important**: Copy the token immediately (you won't see it again)
+   - It will look like: `vercel_blob_rw_xxxxx...`
+   - This is your `BLOB_READ_WRITE_TOKEN`
+
+#### Step 3: Add Environment Variable
+
+1. **In Vercel Project Settings**
+   - Go to **Settings** → **Environment Variables**
+   - Add new variable:
+     - **Name**: `BLOB_READ_WRITE_TOKEN`
+     - **Value**: Paste the token you copied
+     - **Environment**: Production, Preview, Development (select all)
+   - Click **Save**
+
+### Alternative: Using External Services
+
+If you prefer external services:
+
+**PostgreSQL:**
+- **Neon** (Recommended): [neon.tech](https://neon.tech) - Free tier available
+- **Supabase**: [supabase.com](https://supabase.com) - Free tier available
+- **Railway**: [railway.app](https://railway.app) - Free tier available
+
+**Blob Storage Alternatives:**
+- AWS S3
+- Cloudflare R2
+- Google Cloud Storage
+
+Update your `DATABASE_URL` and `BLOB_READ_WRITE_TOKEN` accordingly.
+
 ## Deployment to Vercel
 
 ### 1. Push to GitHub
@@ -247,11 +364,11 @@ git push -u origin main
 1. Go to [Vercel Dashboard](https://vercel.com)
 2. Import your GitHub repository
 3. Configure environment variables:
-   - `DATABASE_URL`
-   - `OPENAI_API_KEY`
-   - `BLOB_READ_WRITE_TOKEN`
+   - `DATABASE_URL` (from Vercel Postgres `POSTGRES_PRISMA_URL` or your connection string)
+   - `OPENAI_API_KEY` (from [platform.openai.com](https://platform.openai.com))
+   - `BLOB_READ_WRITE_TOKEN` (from Vercel Blob store tokens)
    - `NEXTAUTH_SECRET` (generate a secure random string)
-   - `NEXTAUTH_URL` (your Vercel deployment URL)
+   - `NEXTAUTH_URL` (your Vercel deployment URL, e.g., `https://your-app.vercel.app`)
    - `ENABLE_SERVER_OCR` (set to `false` for now)
    - `APP_BASE_URL` (your Vercel deployment URL)
 
