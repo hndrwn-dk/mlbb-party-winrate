@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/components/ui/toast";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -23,6 +24,7 @@ async function fetchFriends(): Promise<Friend[]> {
 export default function SettingsPage() {
   const [recomputing, setRecomputing] = useState(false);
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
 
   const { data: friends = [] } = useQuery({
     queryKey: ["friends"],
@@ -41,10 +43,10 @@ export default function SettingsPage() {
       if (!res.ok) throw new Error("Recompute failed");
 
       await queryClient.invalidateQueries({ queryKey: ["friends"] });
-      alert("Stats recomputed successfully!");
+      showToast("Stats recomputed successfully!", "success");
     } catch (error) {
       console.error("Recompute error:", error);
-      alert("Recompute failed");
+      showToast("Recompute failed", "error");
     } finally {
       setRecomputing(false);
     }

@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/components/ui/toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -17,6 +18,7 @@ export default function UploadPage() {
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -72,7 +74,7 @@ export default function UploadPage() {
       setOcrText(text);
     } catch (error) {
       console.error("Upload error:", error);
-      alert("Upload failed");
+      showToast("Upload failed", "error");
     } finally {
       setUploading(false);
     }
@@ -92,13 +94,13 @@ export default function UploadPage() {
       if (!res.ok) throw new Error("Parse failed");
 
       await queryClient.invalidateQueries({ queryKey: ["friends"] });
-      alert("Match saved successfully!");
+      showToast("Match saved successfully!", "success");
       setFile(null);
       setOcrText(null);
       setUploadId(null);
     } catch (error) {
       console.error("Parse error:", error);
-      alert("Parse failed");
+      showToast("Parse failed", "error");
     } finally {
       setParsing(false);
     }
