@@ -1,90 +1,143 @@
 # MLBB Party Winrate Predictor
 
-Predict duo win probability from MLBB match screenshots using OCR (Tesseract.js) and AI-powered explanations (OpenAI).
+A Next.js application that predicts duo win probability from Mobile Legends: Bang Bang match screenshots using OCR and AI-powered explanations.
 
 ## Features
 
-- **Upload & OCR**: Upload match screenshots and extract data using Tesseract.js
-- **Match Parsing**: Automatically parse scoreboard data (heroes, K/D/A, results)
+- **Upload & OCR**: Drag-and-drop match screenshot upload with client-side OCR processing
+- **Match Parsing**: Automatic extraction of scoreboard data (heroes, K/D/A, results)
 - **Win Prediction**: Local baseline predictor with OpenAI-enhanced explanations
-- **Friend Dashboard**: View all friends ranked by synergy score
-- **Detailed Analytics**: See predictions, recommendations, and recent matches per friend
+- **Friend Dashboard**: Track all teammates ranked by synergy score
+- **Detailed Analytics**: View predictions, recommendations, and recent matches per friend
+- **Custom Toast Notifications**: Professional in-app notifications instead of browser alerts
 
 ## Tech Stack
 
 - **Next.js 15** (App Router) with TypeScript
-- **Prisma** + **PostgreSQL** (Neon/Supabase)
+- **Prisma** + **PostgreSQL** (Vercel Postgres, Neon, or Supabase)
 - **Vercel Blob** for image storage
 - **Tesseract.js** for client-side OCR
-- **OpenAI API** (Responses API with structured outputs)
+- **OpenAI API** (gpt-4o-mini with structured outputs)
 - **TanStack Query** for data fetching
 - **Tailwind CSS** + **shadcn/ui** components
+- **Inter** font for clean typography
 
 ## Prerequisites
 
-- Node.js 18+ and pnpm
-- PostgreSQL database (Neon or Supabase)
+- Node.js 20.x
+- npm 9+
+- PostgreSQL database (Vercel Postgres, Neon, or Supabase)
 - OpenAI API key
 - Vercel account (for Blob storage)
 
-## Local Development Setup
+## Local Development
 
 ### 1. Install Dependencies
 
 ```bash
-pnpm install
+npm install
 ```
 
-### 2. Set Up Environment Variables
+### 2. Environment Variables
 
 Create `.env.local`:
 
 ```env
-# For Vercel Postgres, use POSTGRES_PRISMA_URL (auto-added by Vercel)
-# Or use your own PostgreSQL connection string
-DATABASE_URL=postgresql://user:password@host:port/database
+# Database
+DATABASE_URL=postgresql://user:password@host:port/database?sslmode=require
 # Or if using Vercel Postgres:
 # DATABASE_URL=$POSTGRES_PRISMA_URL
 
+# OpenAI
 OPENAI_API_KEY=sk-...
+
+# Vercel Blob Storage
 BLOB_READ_WRITE_TOKEN=vercel_blob_rw_...
-NEXTAUTH_SECRET=dev-secret-or-random-string
+
+# NextAuth (for production)
+NEXTAUTH_SECRET=your-secret-key
 NEXTAUTH_URL=http://localhost:3000
+
+# App Config
 ENABLE_SERVER_OCR=false
 APP_BASE_URL=http://localhost:3000
 ```
 
-**Note**: If using Vercel Postgres, Vercel automatically provides `POSTGRES_PRISMA_URL` which you can use directly for `DATABASE_URL`.
-
-### 3. Set Up Database
+### 3. Database Setup
 
 ```bash
 # Generate Prisma Client
-pnpm prisma:generate
+npm run prisma:generate
 
 # Run migrations
-pnpm prisma:migrate:dev
+npm run prisma:migrate:dev
 
 # (Optional) Seed database
-pnpm seed
+npm run seed
 ```
 
 ### 4. Run Development Server
 
 ```bash
-pnpm dev
+npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
+## Deployment to Vercel
+
+### 1. Push to GitHub
+
+```bash
+git push origin main
+```
+
+### 2. Deploy to Vercel
+
+1. Go to [Vercel Dashboard](https://vercel.com)
+2. Import your GitHub repository
+3. Configure environment variables:
+   - `DATABASE_URL` (from Vercel Postgres `POSTGRES_PRISMA_URL`)
+   - `OPENAI_API_KEY` (from [platform.openai.com](https://platform.openai.com))
+   - `BLOB_READ_WRITE_TOKEN` (from Vercel Blob store)
+   - `NEXTAUTH_SECRET` (generate secure random string)
+   - `NEXTAUTH_URL` (your Vercel URL)
+   - `APP_BASE_URL` (your Vercel URL)
+
+### 3. Set Up Vercel Services
+
+#### Vercel Postgres
+
+1. Project → **Storage** tab
+2. Create **Postgres** database
+3. Copy `POSTGRES_PRISMA_URL` from database settings
+4. Add as `DATABASE_URL` environment variable
+
+#### Vercel Blob Storage
+
+1. Project → **Storage** tab
+2. Create **Blob** store
+3. Go to store **Settings** → **Tokens**
+4. Create Read-Write token
+5. Copy token (you won't see it again)
+6. Add as `BLOB_READ_WRITE_TOKEN` environment variable
+
+Migrations run automatically on deployment via `vercel-build` script.
+
+### 4. OpenAI API Key
+
+1. Go to [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
+2. Create new secret key
+3. Copy immediately (you won't see it again)
+4. Add as `OPENAI_API_KEY` environment variable
+5. Set usage limits in OpenAI dashboard
+
 ## API Endpoints
 
 ### POST `/api/upload`
+Upload match screenshot.
 
-Upload a match screenshot.
-
-**Request:**
-- `file` (FormData): Image file
+**Request:** FormData with `file` field
 
 **Response:**
 ```json
@@ -96,7 +149,6 @@ Upload a match screenshot.
 ```
 
 ### POST `/api/parse`
-
 Parse OCR text and save match.
 
 **Request:**
@@ -116,7 +168,6 @@ Parse OCR text and save match.
 ```
 
 ### POST `/api/recompute`
-
 Recompute friend statistics.
 
 **Request:**
@@ -126,15 +177,7 @@ Recompute friend statistics.
 }
 ```
 
-**Response:**
-```json
-{
-  "updatedStatsCount": 5
-}
-```
-
 ### POST `/api/predict`
-
 Get baseline prediction.
 
 **Request:**
@@ -148,13 +191,11 @@ Get baseline prediction.
 ```json
 {
   "winProb": 0.65,
-  "confidence": 0.7,
-  "reason": "..."
+  "confidence": 0.7
 }
 ```
 
 ### POST `/api/openai/predict-explain`
-
 Get AI-enhanced prediction with explanations.
 
 **Request:**
@@ -183,17 +224,8 @@ Get AI-enhanced prediction with explanations.
 }
 ```
 
-**Example cURL:**
-
-```bash
-curl -X POST http://localhost:3000/api/openai/predict-explain \
-  -H "Content-Type: application/json" \
-  -d '{"friendId": "clxxxxx"}'
-```
-
 ### GET `/api/friends`
-
-Get all friends with stats.
+Get all friends with stats, sorted by synergy score.
 
 **Response:**
 ```json
@@ -210,190 +242,20 @@ Get all friends with stats.
 ```
 
 ### GET `/api/friend/[id]`
-
 Get friend detail with recent matches.
 
-**Response:**
-```json
-{
-  "friend": {
-    "id": "...",
-    "gameUserId": "...",
-    "displayName": "...",
-    "stats": { ... }
-  },
-  "matches": [...]
-}
-```
+### GET `/api/health`
+Health check endpoint for diagnostics.
 
 ## Testing
 
 ```bash
-# Run tests
-pnpm test
+npm test
 ```
 
 Tests cover:
 - `tests/parse.test.ts`: OCR parsing logic
 - `tests/baseline.test.ts`: Baseline prediction logic
-
-## Setting Up Vercel Services
-
-### Setting Up Vercel Postgres Database
-
-#### Option 1: Via Vercel Dashboard
-
-1. **Go to your Vercel project dashboard**
-   - Navigate to [Vercel Dashboard](https://vercel.com/dashboard)
-   - Select your project
-
-2. **Open the Storage tab**
-   - Click on the **Storage** tab in your project
-   - Click **Create Database**
-   - Select **Postgres**
-
-3. **Create Postgres Database**
-   - Click **Create**
-   - Give your database a name (e.g., `mlbb-party-db`)
-   - Select a region closest to your users
-   - Click **Create Database**
-
-4. **Get Connection String**
-   - Once created, go to the **Settings** tab of your database
-   - Copy the **Connection String** (Postgres format)
-   - It should look like: `postgres://default:password@host:5432/verceldb?sslmode=require`
-   - This will be your `DATABASE_URL`
-
-5. **Auto-configured Environment Variable**
-   - Vercel automatically adds `POSTGRES_PRISMA_URL` and `POSTGRES_URL_NON_POOLING`
-   - For Prisma, use `POSTGRES_PRISMA_URL` as your `DATABASE_URL`
-   - Or manually set `DATABASE_URL` using the connection string from step 4
-
-#### Option 2: Via Vercel CLI
-
-```bash
-# Install Vercel CLI if you haven't
-npm i -g vercel
-
-# Login to Vercel
-vercel login
-
-# Link your project
-vercel link
-
-# Create Postgres database
-vercel storage create postgres --name mlbb-party-db
-```
-
-### Setting Up Vercel Blob Storage
-
-#### Step 1: Create Blob Store
-
-1. **Go to your Vercel project dashboard**
-   - Navigate to [Vercel Dashboard](https://vercel.com/dashboard)
-   - Select your project
-
-2. **Open the Storage tab**
-   - Click on the **Storage** tab
-   - Click **Create Database**
-   - Select **Blob**
-
-3. **Create Blob Store**
-   - Click **Create**
-   - Give your store a name (e.g., `mlbb-uploads`)
-   - Select a region
-   - Click **Create**
-
-#### Step 2: Get Blob Token
-
-1. **Access Blob Settings**
-   - Go to your Blob store's **Settings** tab
-   - Scroll to **Tokens** section
-
-2. **Create Read-Write Token**
-   - Click **Create Token**
-   - Name it (e.g., `production-rw-token`)
-   - Select **Read and Write** permissions
-   - Click **Create Token**
-
-3. **Copy the Token**
-   - **Important**: Copy the token immediately (you won't see it again)
-   - It will look like: `vercel_blob_rw_xxxxx...`
-   - This is your `BLOB_READ_WRITE_TOKEN`
-
-#### Step 3: Add Environment Variable
-
-1. **In Vercel Project Settings**
-   - Go to **Settings** → **Environment Variables**
-   - Add new variable:
-     - **Name**: `BLOB_READ_WRITE_TOKEN`
-     - **Value**: Paste the token you copied
-     - **Environment**: Production, Preview, Development (select all)
-   - Click **Save**
-
-### Alternative: Using External Services
-
-If you prefer external services:
-
-**PostgreSQL:**
-- **Neon** (Recommended): [neon.tech](https://neon.tech) - Free tier available
-- **Supabase**: [supabase.com](https://supabase.com) - Free tier available
-- **Railway**: [railway.app](https://railway.app) - Free tier available
-
-**Blob Storage Alternatives:**
-- AWS S3
-- Cloudflare R2
-- Google Cloud Storage
-
-Update your `DATABASE_URL` and `BLOB_READ_WRITE_TOKEN` accordingly.
-
-## Deployment to Vercel
-
-### 1. Push to GitHub
-
-```bash
-git init
-git add .
-git commit -m "Initial commit"
-git remote add origin <your-repo-url>
-git push -u origin main
-```
-
-### 2. Deploy to Vercel
-
-1. Go to [Vercel Dashboard](https://vercel.com)
-2. Import your GitHub repository
-3. Configure environment variables:
-   - `DATABASE_URL` (from Vercel Postgres `POSTGRES_PRISMA_URL` or your connection string)
-   - `OPENAI_API_KEY` (from [platform.openai.com](https://platform.openai.com))
-   - `BLOB_READ_WRITE_TOKEN` (from Vercel Blob store tokens)
-   - `NEXTAUTH_SECRET` (generate a secure random string)
-   - `NEXTAUTH_URL` (your Vercel deployment URL, e.g., `https://your-app.vercel.app`)
-   - `ENABLE_SERVER_OCR` (set to `false` for now)
-   - `APP_BASE_URL` (your Vercel deployment URL)
-
-### 3. Run Database Migrations
-
-```bash
-# In Vercel dashboard or via CLI
-vercel env pull
-pnpm prisma:migrate:deploy
-```
-
-### 4. Optional: Set Up Vercel Cron
-
-For nightly recompute, add `vercel.json`:
-
-```json
-{
-  "crons": [
-    {
-      "path": "/api/recompute",
-      "schedule": "0 0 * * *"
-    }
-  ]
-}
-```
 
 ## Project Structure
 
@@ -401,7 +263,7 @@ For nightly recompute, add `vercel.json`:
 app/
   api/                    # API routes
   dashboard/             # Dashboard page
-  upload/                # Upload page
+  upload/                # Upload page with drag-and-drop
   friend/[id]/           # Friend detail page
   settings/              # Settings page
   styles/                # Global styles
@@ -420,16 +282,53 @@ lib/
   guard.ts              # Auth guard
 prisma/
   schema.prisma         # Database schema
-  seed.ts              # Seed script
-tests/                 # Test files
+  migrations/           # Database migrations
+  seed.ts               # Seed script
+tests/                  # Test files
 ```
 
-## Notes
+## Scripts
 
-- **No Icons/Emoticons**: UI is text-based only (no icons/emoticons)
-- **Local Baseline**: Core prediction is deterministic and runs locally
-- **OpenAI Guardrails**: AI predictions are clamped to baseline ±0.15
-- **Thin Data Handling**: Predictions show reduced confidence when `gamesTogether < 5`
+```bash
+# Development
+npm run dev              # Start dev server
+npm run build            # Build for production
+npm run start            # Start production server
+
+# Database
+npm run prisma:generate        # Generate Prisma Client
+npm run prisma:migrate:dev     # Create migration (dev)
+npm run prisma:migrate:deploy  # Apply migrations (prod)
+npm run prisma:studio          # Open Prisma Studio
+
+# Testing
+npm test                 # Run tests
+npm run lint             # Run ESLint
+```
+
+## Troubleshooting
+
+### Database Connection Issues
+
+Check the `/api/health` endpoint for diagnostics:
+- Database URL configured
+- Database connection status
+- Migrations applied
+- Tables found
+
+### Common Issues
+
+**"Can't reach database server"**
+- Verify `DATABASE_URL` in environment variables
+- Ensure connection string includes `?sslmode=require`
+
+**"relation 'User' does not exist"**
+- Run migrations: `npm run prisma:migrate:deploy`
+- Check build logs for migration errors
+
+**"OPENAI_API_KEY is not defined"**
+- Verify environment variable name is exactly `OPENAI_API_KEY`
+- Redeploy after adding environment variables
 
 ## License
 
