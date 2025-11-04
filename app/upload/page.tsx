@@ -392,7 +392,12 @@ export default function UploadPage() {
           <Card className="mt-6">
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle className="text-xl font-semibold">Previous Uploads</CardTitle>
+                <div>
+                  <CardTitle className="text-xl font-semibold">Previous Uploads</CardTitle>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Clean up old uploads with incorrect parsing. Deleting an upload will remove the image but not the matches created from it.
+                  </p>
+                </div>
                 <Button
                   onClick={() => refetchUploads()}
                   variant="outline"
