@@ -1,13 +1,21 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/components/ui/toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { ocrFromImage } from "@/lib/ocr-client";
 import Link from "next/link";
+
+interface Upload {
+  id: string;
+  url: string;
+  processed: boolean;
+  createdAt: string;
+  parseNotes?: string | null;
+}
 
 export default function UploadPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -19,6 +27,48 @@ export default function UploadPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const { showToast } = useToast();
+
+  // Fetch existing uploads
+  const { data: uploadsData, refetch: refetchUploads } = useQuery<{ uploads: Upload[] }>({
+    queryKey: ["uploads"],
+    queryFn: async () => {
+      const res = await fetch("/api/uploads");
+      if (!res.ok) throw new Error("Failed to fetch uploads");
+      return res.json();
+    },
+  });
+
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleDeleteUpload = async (uploadId: string) => {
+    setDeletingId(uploadId);
+    try {
+      const res = await fetch(`/api/upload/${uploadId}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) throw new Error("Failed to delete upload");
+
+      showToast("Upload deleted successfully", "success");
+      await refetchUploads();
+    } catch (error) {
+      console.error("Delete error:", error);
+      showToast("Failed to delete upload", "error");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -101,6 +151,7 @@ export default function UploadPage() {
 
       const data = await res.json();
       await queryClient.invalidateQueries({ queryKey: ["friends"] });
+      await refetchUploads();
       showToast("Match saved successfully!", "success");
       setFile(null);
       setOcrText(null);
@@ -335,6 +386,84 @@ export default function UploadPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Previous Uploads Section */}
+        {uploadsData && uploadsData.uploads.length > 0 && (
+          <Card className="mt-6">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xl font-semibold">Previous Uploads</CardTitle>
+                <Button
+                  onClick={() => refetchUploads()}
+                  variant="outline"
+                  size="sm"
+                  className="h-8"
+                >
+                  Refresh
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {uploadsData.uploads.map((upload) => (
+                  <div
+                    key={upload.id}
+                    className="flex items-center gap-4 p-3 rounded-lg border border-border bg-secondary/50 hover:bg-secondary transition-colors"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-sm font-medium text-foreground truncate">
+                          Upload {upload.id.slice(0, 8)}
+                        </span>
+                        {upload.processed ? (
+                          <span className="px-2 py-0.5 text-xs rounded bg-green-100 text-green-700">
+                            Processed
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 text-xs rounded bg-yellow-100 text-yellow-700">
+                            Pending
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {formatDate(upload.createdAt)}
+                      </p>
+                      {upload.parseNotes && (
+                        <p className="text-xs text-muted-foreground mt-1 italic">
+                          {upload.parseNotes}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={upload.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-primary hover:underline"
+                      >
+                        View
+                      </a>
+                      <Button
+                        onClick={() => handleDeleteUpload(upload.id)}
+                        variant="ghost"
+                        size="sm"
+                        disabled={deletingId === upload.id}
+                        className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10 disabled:opacity-50"
+                        title="Delete upload"
+                      >
+                        {deletingId === upload.id ? (
+                          <span className="text-sm animate-spin">⟳</span>
+                        ) : (
+                          <span className="text-sm font-bold">X</span>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

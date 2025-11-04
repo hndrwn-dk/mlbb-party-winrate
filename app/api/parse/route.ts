@@ -105,6 +105,14 @@ export async function POST(request: NextRequest) {
     for (const player of parsed.players) {
       const friend = friendMap.get(player.gameUserId);
       if (friend) {
+        // Update friend's displayName if we have a new one and it's different
+        if (player.displayName && player.displayName !== friend.displayName) {
+          await prisma.friend.update({
+            where: { id: friend.id },
+            data: { displayName: player.displayName },
+          });
+        }
+        
         await prisma.matchPlayer.updateMany({
           where: {
             matchId: match.id,
@@ -119,7 +127,7 @@ export async function POST(request: NextRequest) {
           data: {
             userId,
             gameUserId: player.gameUserId,
-            displayName: player.displayName,
+            displayName: player.displayName || player.gameUserId,
           },
         });
       }
