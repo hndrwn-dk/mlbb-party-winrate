@@ -115,7 +115,13 @@ export default function UploadPage() {
         body: formData,
       });
 
-      if (!res.ok) throw new Error("Upload failed");
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: "Upload failed" }));
+        const errorMessage = errorData.details 
+          ? `${errorData.error}: ${errorData.details}`
+          : errorData.error || "Upload failed";
+        throw new Error(errorMessage);
+      }
 
       const data = await res.json();
       setUploadId(data.uploadId);
@@ -124,7 +130,8 @@ export default function UploadPage() {
       setOcrText(text);
     } catch (error) {
       console.error("Upload error:", error);
-      showToast("Upload failed", "error");
+      const errorMessage = error instanceof Error ? error.message : "Upload failed";
+      showToast(errorMessage, "error");
     } finally {
       setUploading(false);
     }
