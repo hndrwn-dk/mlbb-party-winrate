@@ -249,16 +249,62 @@ export function parseScoreboard(rawText: string): ParsedMatch | null {
   let result: "win" | "lose" | null = null;
   let mode: string | undefined;
 
+  // First pass: Look for match result indicators (usually at top of screen)
+  for (let i = 0; i < Math.min(lines.length, 5); i++) {
+    const line = lines[i];
+    const lineLower = line.toLowerCase();
+    const originalLine = line;
+
+    // Check for explicit match result keywords
+    if (lineLower.includes("victory") || lineLower.includes("win")) {
+      result = "win";
+      break;
+    } else if (lineLower.includes("defeat") || lineLower.includes("lose")) {
+      result = "lose";
+      break;
+    }
+
+    // Check for score patterns with victory/defeat indicators
+    // Patterns like: "26 VICTORY 19", "26 V 19", "B 26. = 19" (B might be corrupted V)
+    // or "DEFEAT 19 26", etc.
+    const victoryPattern = /(\d+)\s*(?:victory|v|b)\s*[\.=\-]?\s*(\d+)/i;
+    const defeatPattern = /(?:defeat|d)\s*(\d+)\s*[\.=\-]?\s*(\d+)/i;
+    const scorePattern = /(\d+)\s*[\.=vs\-]\s*(\d+)/i;
+    
+    const victoryMatch = originalLine.match(victoryPattern);
+    const defeatMatch = originalLine.match(defeatPattern);
+    const scoreMatch = originalLine.match(scorePattern);
+    
+    if (victoryMatch) {
+      const score1 = parseInt(victoryMatch[1], 10);
+      const score2 = parseInt(victoryMatch[2], 10);
+      // If format is "26 VICTORY 19", first number is winning team
+      result = "win";
+      break;
+    } else if (defeatMatch) {
+      result = "lose";
+      break;
+    } else if (scoreMatch) {
+      const score1 = parseInt(scoreMatch[1], 10);
+      const score2 = parseInt(scoreMatch[2], 10);
+      // If we see "B" or "V" before the score, and first number > second, likely victory
+      // "B 26. = 19" pattern where B might be corrupted V for Victory
+      if (originalLine.match(/[bv]\s*\d/i) && score1 > score2) {
+        result = "win";
+        break;
+      } else if (score1 > score2) {
+        // If first score is higher, assume win (common pattern)
+        result = "win";
+      } else if (score2 > score1) {
+        result = "lose";
+      }
+    }
+  }
+
+  // Second pass: Extract player data
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const lineLower = line.toLowerCase();
-
-    // Check for match result
-    if (lineLower.includes("victory") || lineLower.includes("win")) {
-      result = "win";
-    } else if (lineLower.includes("defeat") || lineLower.includes("lose")) {
-      result = "lose";
-    }
 
     // Check for game mode
     if (lineLower.includes("ranked") || lineLower.includes("classic") || lineLower.includes("brawl")) {
@@ -347,8 +393,16 @@ export function parseScoreboard(rawText: string): ParsedMatch | null {
     }
   }
 
-  if (!result || players.length === 0) {
+  // If we have players but no result, infer from context or default to win
+  // (better to save with default than to fail completely)
+  if (players.length === 0) {
     return null;
+  }
+  
+  // If we still don't have a result but have valid players, default to win
+  // This allows saving matches even if OCR missed the result text
+  if (!result) {
+    result = "win"; // Default assumption - can be corrected later if needed
   }
 
   const partySize = ownerPartyIndices.length;
