@@ -28,6 +28,8 @@ export default function DashboardPage() {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isCleaningUp, setIsCleaningUp] = useState(false);
+  const [showCleanupConfirm, setShowCleanupConfirm] = useState(false);
 
   const { data: friends = [], isLoading } = useQuery({
     queryKey: ["friends"],
@@ -53,6 +55,29 @@ export default function DashboardPage() {
       showToast("Failed to delete friend", "error");
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  const handleCleanup = async (deleteMatches: boolean = false) => {
+    setIsCleaningUp(true);
+    try {
+      const res = await fetch("/api/cleanup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ deleteMatches }),
+      });
+
+      if (!res.ok) throw new Error("Failed to cleanup");
+
+      const data = await res.json();
+      showToast(data.message || "Cleanup completed successfully", "success");
+      setShowCleanupConfirm(false);
+      await queryClient.invalidateQueries({ queryKey: ["friends"] });
+    } catch (error) {
+      console.error("Cleanup error:", error);
+      showToast("Failed to cleanup data", "error");
+    } finally {
+      setIsCleaningUp(false);
     }
   };
 
@@ -114,6 +139,15 @@ export default function DashboardPage() {
             >
               Settings
             </Link>
+            {friends.length > 0 && (
+              <Button
+                onClick={() => setShowCleanupConfirm(true)}
+                variant="outline"
+                className="px-6 py-3 border-destructive text-destructive hover:bg-destructive/10 transition-colors"
+              >
+                Clean Up
+              </Button>
+            )}
           </nav>
         </div>
 
@@ -225,6 +259,52 @@ export default function DashboardPage() {
               ))}
             </div>
           </>
+        )}
+
+        {showCleanupConfirm && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <Card className="w-full max-w-md mx-4 border-destructive/50">
+              <CardHeader>
+                <CardTitle className="text-destructive">Confirm Cleanup</CardTitle>
+                <CardDescription>
+                  This will delete all friends{friends.length > 0 ? ` (${friends.length})` : ""} from your dashboard.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+                  <p className="text-sm text-muted-foreground">
+                    This action cannot be undone. All friend data and statistics will be permanently deleted.
+                  </p>
+                </div>
+                <div className="flex gap-3">
+                  <Button
+                    onClick={() => handleCleanup(false)}
+                    disabled={isCleaningUp}
+                    variant="destructive"
+                    className="flex-1"
+                  >
+                    {isCleaningUp ? "Cleaning..." : "Delete Friends Only"}
+                  </Button>
+                  <Button
+                    onClick={() => handleCleanup(true)}
+                    disabled={isCleaningUp}
+                    variant="destructive"
+                    className="flex-1"
+                  >
+                    {isCleaningUp ? "Cleaning..." : "Delete Friends & Matches"}
+                  </Button>
+                </div>
+                <Button
+                  onClick={() => setShowCleanupConfirm(false)}
+                  disabled={isCleaningUp}
+                  variant="outline"
+                  className="w-full"
+                >
+                  Cancel
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
         )}
       </div>
     </div>
