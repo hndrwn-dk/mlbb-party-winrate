@@ -52,13 +52,18 @@ function extractKDA(text: string): { k: number; d: number; a: number } | null {
  * - "BATRS Agatsuma" -> "ATRS Agatsuma" (removes stray 'B')
  * - "San d ATRS Agatsuma" -> "ATRS Agatsuma" (removes prefix text)
  * - "© ATRS Agatsuma" -> "ATRS Agatsuma" (removes symbols)
+ * - "& ©@ATRS Agatsuma" -> "ATRS Agatsuma" (removes multiple symbols)
  * - "ATRSAgatsuma" -> "ATRS Agatsuma" (adds space before capital)
  */
 function normalizePlayerName(name: string): string {
   let cleaned = name.trim();
   
-  // Remove leading symbols and whitespace
-  cleaned = cleaned.replace(/^[©®™@#$\s]+/, '');
+  // Remove all leading symbols and whitespace (handles "& ©@", "©", etc.)
+  // This is more aggressive to handle concatenated symbols
+  cleaned = cleaned.replace(/^[©®™@#$\s&]+/, '');
+  
+  // Remove any remaining symbol sequences (handles cases like "@ATRS" after first pass)
+  cleaned = cleaned.replace(/^[@#$\s]+/, '');
   
   // Fix missing spaces first: if we have lowercase/number followed immediately by uppercase,
   // insert a space (e.g., "ATRSAgatsuma" -> "ATRS Agatsuma")
@@ -179,6 +184,10 @@ function extractPlayerName(line: string): { displayName: string; gameUserId: str
 /**
  * Extracts player data from a line that may contain player name and KDA together.
  * Returns array because a line can contain multiple players (winning + losing team).
+ * Handles various OCR formats:
+ * - "@ PlayerName K D A"
+ * - "& ©@ATRS Agatsuma 3 3 4"
+ * - "© BABA garou 2 2 10"
  */
 function extractPlayerFromLine(originalLine: string): Array<{
   displayName?: string;
@@ -193,76 +202,97 @@ function extractPlayerFromLine(originalLine: string): Array<{
     gold?: number;
   }> = [];
 
-  // Pattern to find player name followed by KDA
-  // Format: @ PlayerName K D A Gold ... (may have another player after)
-  // Example: "@ Gow kaung khant6 4 4 10471 o . 7921 1 5 6 ZURA™"
+  // First, find all KDA patterns in the line
+  const kdaPattern = /(\d+)\s+(\d+)\s+(\d+)/g;
+  const kdaMatches: Array<{ k: number; d: number; a: number; index: number }> = [];
+  let match;
   
-  // Split by @ to find potential player segments
-  const segments = originalLine.split(/(?=@)/);
-  
-  for (const segment of segments) {
-    if (!segment.trim()) continue;
+  while ((match = kdaPattern.exec(originalLine)) !== null) {
+    const k = parseInt(match[1], 10);
+    const d = parseInt(match[2], 10);
+    const a = parseInt(match[3], 10);
     
-    // Look for @ symbol followed by name
-    const nameMatch = segment.match(/@\s*([^0-9@]+?)(?=\s+\d+\s+\d+\s+\d+)/i);
-    if (!nameMatch) continue;
+    // Validate KDA values are reasonable
+    if (k <= 100 && d <= 100 && a <= 100) {
+      kdaMatches.push({
+        k,
+        d,
+        a,
+        index: match.index,
+      });
+    }
+  }
+
+  // For each KDA, try to find the player name before it
+  for (const kdaMatch of kdaMatches) {
+    // Check if we already found a player for this KDA
+    const alreadyFound = results.some(r => 
+      r.kda?.k === kdaMatch.k && r.kda?.d === kdaMatch.d && r.kda?.a === kdaMatch.a
+    );
+    
+    if (alreadyFound) continue;
+    
+    // Extract text before this KDA (up to 100 chars, or to previous KDA)
+    const kdaStart = kdaMatch.index;
+    const prevKdaEnd = kdaMatches
+      .filter(m => m.index < kdaStart)
+      .map(m => m.index + 50) // Approximate end of previous KDA section
+      .reduce((max, idx) => Math.max(max, idx), 0);
+    
+    const beforeKda = originalLine.substring(
+      Math.max(0, prevKdaEnd),
+      kdaStart
+    ).trim();
+    
+    if (!beforeKda) continue;
+    
+    // Try multiple patterns to extract the name
+    
+    // Pattern 1: Look for @ symbol (may have symbols before it like "& ©@")
+    let nameMatch = beforeKda.match(/[@]\s*([^0-9@\s][^0-9@]{1,28}?)(?=\s*\d+\s+\d+\s+\d+|\s*$)/i);
+    
+    // Pattern 2: Look for common symbols (©, ®, &) followed by name
+    if (!nameMatch) {
+      nameMatch = beforeKda.match(/[©®™&@#\s]*([A-Za-z][A-Za-z0-9\s]{1,28}?)(?=\s*\d+\s+\d+\s+\d+|\s*$)/);
+    }
+    
+    // Pattern 3: Look for any sequence of letters/numbers that looks like a name
+    if (!nameMatch) {
+      // Find the last word-like sequence before the KDA
+      const words = beforeKda.match(/([A-Za-z][A-Za-z0-9\s]{1,28})/g);
+      if (words && words.length > 0) {
+        // Take the last significant word sequence (likely the player name)
+        const lastWord = words[words.length - 1].trim();
+        if (lastWord.length >= 2 && lastWord.length <= 30) {
+          nameMatch = [null, lastWord]; // Create a match-like structure
+        }
+      }
+    }
+    
+    if (!nameMatch || !nameMatch[1]) continue;
     
     const potentialName = nameMatch[1].trim();
     if (potentialName.length < 2 || potentialName.length > 30) continue;
     
-    // Find KDA pattern after the name
-    const kdaAfterName = segment.substring(nameMatch.index! + nameMatch[0].length);
-    const kdaMatch = kdaAfterName.match(/(\d+)\s+(\d+)\s+(\d+)/);
-    
-    if (!kdaMatch) continue;
-    
-    const k = parseInt(kdaMatch[1], 10);
-    const d = parseInt(kdaMatch[2], 10);
-    const a = parseInt(kdaMatch[3], 10);
-    
-    // Extract gold value (4-6 digit number after KDA)
-    const afterKda = kdaAfterName.substring(kdaMatch.index! + kdaMatch[0].length);
+    // Extract gold value after KDA (4-6 digit number)
+    const afterKda = originalLine.substring(kdaStart + 10); // Skip past "K D A "
     const goldMatch = afterKda.match(/\s+(\d{4,6})/);
     const gold = goldMatch ? parseInt(goldMatch[1], 10) : undefined;
     
-    // Clean up the name (remove trailing numbers that might be part of OCR error)
+    // Clean up the name and normalize it
     const cleanName = potentialName.replace(/\d+$/, '').trim();
     
-    // If name is still valid, extract it
     if (cleanName.length >= 2) {
-      const nameInfo = extractPlayerName(cleanName) || extractPlayerName(`@ ${cleanName}`);
-      results.push({
-        displayName: nameInfo?.displayName || cleanName,
-        gameUserId: nameInfo?.gameUserId || cleanName.toLowerCase().replace(/[^a-z0-9_]/g, '_'),
-        kda: { k, d, a },
-        gold,
-      });
-    }
-  }
-  
-  // Also check for KDA patterns that might not have @ symbol
-  // This handles cases where OCR missed the @ or format is different
-  const allKdas = extractAllKDAs(originalLine);
-  for (const kda of allKdas) {
-    // Check if we already found a player for this KDA
-    const alreadyFound = results.some(r => 
-      r.kda?.k === kda.k && r.kda?.d === kda.d && r.kda?.a === kda.a
-    );
-    
-    if (!alreadyFound) {
-      // Try to find name before this KDA in the same line
-      const kdaIndex = originalLine.indexOf(`${kda.k} ${kda.d} ${kda.a}`);
-      if (kdaIndex > 0) {
-        const beforeKda = originalLine.substring(0, kdaIndex);
-        const nameInfo = extractPlayerName(beforeKda);
-        
-        if (nameInfo) {
-          results.push({
-            displayName: nameInfo.displayName,
-            gameUserId: nameInfo.gameUserId,
-            kda,
-          });
-        }
+      // Use extractPlayerName which will normalize OCR artifacts
+      const nameInfo = extractPlayerName(cleanName);
+      
+      if (nameInfo) {
+        results.push({
+          displayName: nameInfo.displayName,
+          gameUserId: nameInfo.gameUserId,
+          kda: { k: kdaMatch.k, d: kdaMatch.d, a: kdaMatch.a },
+          gold,
+        });
       }
     }
   }
