@@ -91,8 +91,15 @@ export default function UploadPage() {
         body: JSON.stringify({ rawText: ocrText, uploadId }),
       });
 
-      if (!res.ok) throw new Error("Parse failed");
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: "Parse failed" }));
+        const errorMessage = errorData.details 
+          ? `${errorData.error}: ${errorData.details}`
+          : errorData.error || "Parse failed";
+        throw new Error(errorMessage);
+      }
 
+      const data = await res.json();
       await queryClient.invalidateQueries({ queryKey: ["friends"] });
       showToast("Match saved successfully!", "success");
       setFile(null);
@@ -100,7 +107,8 @@ export default function UploadPage() {
       setUploadId(null);
     } catch (error) {
       console.error("Parse error:", error);
-      showToast("Parse failed", "error");
+      const errorMessage = error instanceof Error ? error.message : "Parse failed";
+      showToast(errorMessage, "error");
     } finally {
       setParsing(false);
     }
@@ -140,9 +148,61 @@ export default function UploadPage() {
 
         <Card className="card-glow">
           <CardHeader>
-            <CardTitle className="text-xl font-semibold">Upload Files</CardTitle>
+            <CardTitle className="text-xl font-semibold">Upload Match Screenshot</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
+            <div className="rounded-lg border border-border bg-muted/50 p-4 space-y-3">
+              <div className="flex items-start gap-2">
+                <div className="w-5 h-5 rounded bg-primary/20 flex items-center justify-center flex-shrink-0">
+                  <span className="text-xs font-bold text-primary">i</span>
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-foreground mb-1">
+                    Which screenshot should I upload?
+                  </p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Upload the <strong className="text-foreground">Summary</strong> screen from the post-match results.
+                    This screen shows KDA (Kills/Deaths/Assists), player names, heroes, and match result (VICTORY/DEFEAT).
+                  </p>
+                </div>
+              </div>
+              <div className="border-t border-border pt-3 space-y-2">
+                <div className="flex items-start gap-2">
+                  <div className="w-4 h-4 rounded bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-xs text-green-700 font-bold">+</span>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs font-medium text-foreground">Recommended: Summary Screen</p>
+                    <p className="text-xs text-muted-foreground">
+                      Contains KDA format (6/4/4), player names, heroes, gold, and clear VICTORY/DEFEAT text.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <div className="w-4 h-4 rounded bg-yellow-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-xs text-yellow-700 font-bold">~</span>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs font-medium text-foreground">Alternative: Overall Screen</p>
+                    <p className="text-xs text-muted-foreground">
+                      May work if it contains KDA and match result, but Summary is preferred for best accuracy.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <div className="w-4 h-4 rounded bg-gray-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-xs text-gray-600 font-bold">-</span>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs font-medium text-foreground">Not needed: DPS, Team, Farm screens</p>
+                    <p className="text-xs text-muted-foreground">
+                      These screens don&apos;t contain the required KDA format and player information.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div
               onDragEnter={handleDrag}
               onDragLeave={handleDrag}
@@ -170,7 +230,7 @@ export default function UploadPage() {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-foreground mb-1">
-                    Drag & drop or click to choose files
+                    Drag & drop or click to upload Summary screenshot
                   </p>
                   <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
                     <span>ⓘ</span>
@@ -209,8 +269,9 @@ export default function UploadPage() {
                       onClick={handleRemoveFile}
                       className="h-8 w-8 rounded-full bg-muted hover:bg-muted/80 p-0"
                       variant="ghost"
+                      title="Remove file"
                     >
-                      <span className="text-sm">🗑</span>
+                      <span className="text-sm font-bold">X</span>
                     </Button>
                   </div>
                 </div>
