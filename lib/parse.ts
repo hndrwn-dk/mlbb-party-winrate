@@ -33,15 +33,27 @@ function normalizeHero(name: string): string | undefined {
   return HERO_ALIASES[normalized] ?? name;
 }
 
+/**
+ * Extracts KDA from text, supporting multiple formats:
+ * - "K D A" (spaces)
+ * - "K/D/A" (slashes)
+ * - "K-D-A" (dashes)
+ * - "K:D:A" (colons)
+ * - "K D A" (mixed separators)
+ */
 function extractKDA(text: string): { k: number; d: number; a: number } | null {
-  const kdaPattern = /(\d+)[\/\s]+(\d+)[\/\s]+(\d+)/i;
+  // More flexible pattern: supports /, -, :, spaces, or any combination
+  const kdaPattern = /(\d+)[\/\s\-:]+(\d+)[\/\s\-:]+(\d+)/i;
   const match = text.match(kdaPattern);
   if (match) {
-    return {
-      k: parseInt(match[1], 10),
-      d: parseInt(match[2], 10),
-      a: parseInt(match[3], 10),
-    };
+    const k = parseInt(match[1], 10);
+    const d = parseInt(match[2], 10);
+    const a = parseInt(match[3], 10);
+    
+    // Validate KDA values are reasonable
+    if (k <= 100 && d <= 100 && a <= 100) {
+      return { k, d, a };
+    }
   }
   return null;
 }
@@ -202,26 +214,8 @@ function extractPlayerFromLine(originalLine: string): Array<{
     gold?: number;
   }> = [];
 
-  // First, find all KDA patterns in the line
-  const kdaPattern = /(\d+)\s+(\d+)\s+(\d+)/g;
-  const kdaMatches: Array<{ k: number; d: number; a: number; index: number }> = [];
-  let match;
-  
-  while ((match = kdaPattern.exec(originalLine)) !== null) {
-    const k = parseInt(match[1], 10);
-    const d = parseInt(match[2], 10);
-    const a = parseInt(match[3], 10);
-    
-    // Validate KDA values are reasonable
-    if (k <= 100 && d <= 100 && a <= 100) {
-      kdaMatches.push({
-        k,
-        d,
-        a,
-        index: match.index,
-      });
-    }
-  }
+  // First, find all KDA patterns in the line (supports multiple formats)
+  const kdaMatches = extractAllKDAs(originalLine);
 
   // For each KDA, try to find the player name before it
   for (const kdaMatch of kdaMatches) {
@@ -247,23 +241,38 @@ function extractPlayerFromLine(originalLine: string): Array<{
     if (!beforeKda) continue;
     
     // Try multiple patterns to extract the name
+    // Goal: Find the player name before the KDA, handling various OCR formats
     
     // Pattern 1: Look for @ symbol (may have symbols before it like "& ©@")
-    let nameMatch = beforeKda.match(/[@]\s*([^0-9@\s][^0-9@]{1,28}?)(?=\s*\d+\s+\d+\s+\d+|\s*$)/i);
+    // Handles: "@ PlayerName", "& ©@PlayerName", etc.
+    let nameMatch = beforeKda.match(/[@]\s*([^0-9@\s][^0-9@]{1,28}?)(?=\s*[\d\/\-\:]|\s*$)/i);
     
     // Pattern 2: Look for common symbols (©, ®, &) followed by name
+    // Handles: "© PlayerName", "® PlayerName", "& PlayerName", etc.
     if (!nameMatch) {
-      nameMatch = beforeKda.match(/[©®™&@#\s]*([A-Za-z][A-Za-z0-9\s]{1,28}?)(?=\s*\d+\s+\d+\s+\d+|\s*$)/);
+      nameMatch = beforeKda.match(/[©®™&@#\s]*([A-Za-z][A-Za-z0-9\s]{1,28}?)(?=\s*[\d\/\-\:]|\s*$)/);
     }
     
-    // Pattern 3: Look for any sequence of letters/numbers that looks like a name
+    // Pattern 3: Look for name followed by colon (some formats: "PlayerName: K/D/A")
     if (!nameMatch) {
-      // Find the last word-like sequence before the KDA
+      nameMatch = beforeKda.match(/([A-Za-z][A-Za-z0-9\s]{1,28}?)\s*[:]/);
+    }
+    
+    // Pattern 4: Look for any sequence of letters/numbers that looks like a name
+    // This is the most flexible - finds the last word-like sequence before the KDA
+    if (!nameMatch) {
+      // Split by common separators and find the last meaningful word sequence
       const words = beforeKda.match(/([A-Za-z][A-Za-z0-9\s]{1,28})/g);
       if (words && words.length > 0) {
         // Take the last significant word sequence (likely the player name)
-        const lastWord = words[words.length - 1].trim();
-        if (lastWord.length >= 2 && lastWord.length <= 30) {
+        // Filter out very short fragments and common OCR noise
+        const meaningfulWords = words
+          .map(w => w.trim())
+          .filter(w => w.length >= 2 && w.length <= 30)
+          .filter(w => !/^(a|an|the|is|at|on|in|to|for|of|and|or|but)$/i.test(w));
+        
+        if (meaningfulWords.length > 0) {
+          const lastWord = meaningfulWords[meaningfulWords.length - 1];
           nameMatch = [null, lastWord]; // Create a match-like structure
         }
       }
@@ -275,8 +284,10 @@ function extractPlayerFromLine(originalLine: string): Array<{
     if (potentialName.length < 2 || potentialName.length > 30) continue;
     
     // Extract gold value after KDA (4-6 digit number)
-    const afterKda = originalLine.substring(kdaStart + 10); // Skip past "K D A "
-    const goldMatch = afterKda.match(/\s+(\d{4,6})/);
+    // Find the end of the KDA pattern and look for gold after it
+    const kdaEnd = kdaStart + kdaMatch.fullMatch.length;
+    const afterKda = originalLine.substring(kdaEnd);
+    const goldMatch = afterKda.match(/[\s\.\-:]+(\d{4,6})/);
     const gold = goldMatch ? parseInt(goldMatch[1], 10) : undefined;
     
     // Clean up the name and normalize it
@@ -301,11 +312,13 @@ function extractPlayerFromLine(originalLine: string): Array<{
 }
 
 /**
- * Extracts all KDA patterns from a line (may have multiple)
+ * Extracts all KDA patterns from a line (may have multiple).
+ * Supports multiple formats: K/D/A, K-D-A, K D A, K:D:A, etc.
  */
-function extractAllKDAs(text: string): Array<{ k: number; d: number; a: number }> {
-  const results: Array<{ k: number; d: number; a: number }> = [];
-  const kdaPattern = /(\d+)[\/\s]+(\d+)[\/\s]+(\d+)/gi;
+function extractAllKDAs(text: string): Array<{ k: number; d: number; a: number; index: number; fullMatch: string }> {
+  const results: Array<{ k: number; d: number; a: number; index: number; fullMatch: string }> = [];
+  // More flexible pattern supporting /, -, :, spaces, or any combination
+  const kdaPattern = /(\d+)[\/\s\-:]+(\d+)[\/\s\-:]+(\d+)/gi;
   let match;
   
   while ((match = kdaPattern.exec(text)) !== null) {
@@ -313,9 +326,15 @@ function extractAllKDAs(text: string): Array<{ k: number; d: number; a: number }
     const d = parseInt(match[2], 10);
     const a = parseInt(match[3], 10);
     
-    // Validate KDA values are reasonable (K and A can be high, D usually lower)
+    // Validate KDA values are reasonable
     if (k <= 100 && d <= 100 && a <= 100) {
-      results.push({ k, d, a });
+      results.push({
+        k,
+        d,
+        a,
+        index: match.index,
+        fullMatch: match[0],
+      });
     }
   }
   

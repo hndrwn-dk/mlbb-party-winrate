@@ -102,6 +102,28 @@ describe("parseScoreboard", () => {
     expect(gameUserIds[0]).toBe("atrs_agatsuma");
   });
 
+  it("should handle different KDA formats", () => {
+    const formats = [
+      { text: "PlayerName 5/2/8", format: "K/D/A" },
+      { text: "PlayerName 5-2-8", format: "K-D-A" },
+      { text: "PlayerName 5:2:8", format: "K:D:A" },
+      { text: "PlayerName 5 2 8", format: "K D A" },
+      { text: "PlayerName 5/ 2 / 8", format: "K/ D / A" },
+    ];
+
+    for (const testCase of formats) {
+      const result = parseScoreboard(`${testCase.text}\nVictory`);
+      expect(result).not.toBeNull();
+      if (result && result.players.length > 0) {
+        const player = result.players[0];
+        expect(player.k).toBe(5);
+        expect(player.d).toBe(2);
+        expect(player.a).toBe(8);
+        expect(player.gameUserId).toBe("playername");
+      }
+    }
+  });
+
   it("should handle real OCR output with multiple symbols", () => {
     const ocrText = `B 26 Ady 19
 a: —— Duration 14:24
