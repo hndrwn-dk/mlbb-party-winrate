@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireUserId } from "@/lib/guard";
 import { parseScoreboard } from "@/lib/parse";
 import { prisma } from "@/lib/prisma";
+import { findSimilarString } from "@/lib/utils";
 import { z } from "zod";
 
 const ParseSchema = z.object({
@@ -101,9 +102,55 @@ export async function POST(request: NextRequest) {
     });
 
     const friendMap = new Map(friends.map((f) => [f.gameUserId, f]));
+    const friendGameUserIds = friends.map((f) => f.gameUserId);
 
     for (const player of parsed.players) {
-      const friend = friendMap.get(player.gameUserId);
+      let friend = friendMap.get(player.gameUserId);
+      
+      // If exact match not found, try fuzzy matching
+      if (!friend) {
+        const similarMatch = findSimilarString(
+          player.gameUserId,
+          friendGameUserIds,
+          0.7 // 70% similarity threshold
+        );
+        
+        if (similarMatch) {
+          // Found a similar friend, use that instead
+          friend = friendMap.get(similarMatch.match);
+          if (friend) {
+            // Update the player's gameUserId to match the existing friend
+            // This ensures consistency across matches
+            await prisma.matchPlayer.updateMany({
+              where: {
+                matchId: match.id,
+                gameUserId: player.gameUserId,
+              },
+              data: {
+                gameUserId: friend.gameUserId,
+                friendId: friend.id,
+              },
+            });
+            
+            // Update friend's displayName if we have a better one
+            if (player.displayName && player.displayName !== friend.displayName) {
+              // Prefer the name with fewer OCR artifacts (shorter usually means cleaner)
+              const currentLength = friend.displayName?.length || 0;
+              const newLength = player.displayName.length;
+              if (!friend.displayName || newLength < currentLength || 
+                  (newLength === currentLength && player.displayName.length > 0)) {
+                await prisma.friend.update({
+                  where: { id: friend.id },
+                  data: { displayName: player.displayName },
+                });
+              }
+            }
+            
+            continue; // Skip to next player
+          }
+        }
+      }
+      
       if (friend) {
         // Update friend's displayName if we have a new one and it's different
         if (player.displayName && player.displayName !== friend.displayName) {
@@ -123,13 +170,18 @@ export async function POST(request: NextRequest) {
           },
         });
       } else {
-        await prisma.friend.create({
+        // No exact or fuzzy match found, create new friend
+        const newFriend = await prisma.friend.create({
           data: {
             userId,
             gameUserId: player.gameUserId,
             displayName: player.displayName || player.gameUserId,
           },
         });
+        
+        // Add to maps so subsequent players in this batch can match against it
+        friendMap.set(newFriend.gameUserId, newFriend);
+        friendGameUserIds.push(newFriend.gameUserId);
       }
     }
 

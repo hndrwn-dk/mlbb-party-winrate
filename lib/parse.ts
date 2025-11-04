@@ -47,6 +47,55 @@ function extractKDA(text: string): { k: number; d: number; a: number } | null {
 }
 
 /**
+ * Normalizes a player name by removing OCR artifacts and extracting the core name.
+ * Handles cases like:
+ * - "BATRS Agatsuma" -> "ATRS Agatsuma" (removes stray 'B')
+ * - "San d ATRS Agatsuma" -> "ATRS Agatsuma" (removes prefix text)
+ * - "© ATRS Agatsuma" -> "ATRS Agatsuma" (removes symbols)
+ * - "ATRSAgatsuma" -> "ATRS Agatsuma" (adds space before capital)
+ */
+function normalizePlayerName(name: string): string {
+  let cleaned = name.trim();
+  
+  // Remove leading symbols and whitespace
+  cleaned = cleaned.replace(/^[©®™@#$\s]+/, '');
+  
+  // Fix missing spaces first: if we have lowercase/number followed immediately by uppercase,
+  // insert a space (e.g., "ATRSAgatsuma" -> "ATRS Agatsuma")
+  // This helps with later pattern matching
+  cleaned = cleaned.replace(/([a-z0-9])([A-Z])/g, '$1 $2');
+  
+  // Remove single character prefix (like "B" before "ATRS")
+  // Pattern: single letter (case-insensitive) followed by space and capital letter
+  cleaned = cleaned.replace(/^[a-z]\s+(?=[A-Z])/i, '');
+  
+  // Also handle case where single character is directly attached (no space)
+  // Pattern: single lowercase letter followed immediately by uppercase letters
+  // Example: "BATRS" -> "ATRS" (only if removing it leaves a valid name)
+  cleaned = cleaned.replace(/^[a-z](?=[A-Z]{2,})/i, '');
+  
+  // Remove short prefix words that are likely OCR errors
+  // Pattern: 1-2 letter word followed by space, then capital letter
+  // Examples: "ri", "d", etc.
+  cleaned = cleaned.replace(/^[a-z]{1,2}\s+(?=[A-Z])/i, '');
+  
+  // Remove longer prefix fragments that look like OCR errors
+  // Pattern: short word (3-4 chars) followed by space and then what looks like a name
+  // This catches cases like "San d" before "ATRS Agatsuma"
+  // We're more conservative here - only remove if the remaining part looks like a valid name
+  cleaned = cleaned.replace(/^[a-z]{3,4}\s+[a-z]\s+(?=[A-Z])/i, '');
+  
+  // Remove trailing OCR artifacts (numbers, symbols that got attached)
+  cleaned = cleaned.replace(/\s*\d+$/, ''); // Remove trailing numbers
+  cleaned = cleaned.replace(/[©®™@#$]+$/, ''); // Remove trailing symbols
+  
+  // Remove multiple consecutive spaces
+  cleaned = cleaned.replace(/\s+/g, ' ').trim();
+  
+  return cleaned;
+}
+
+/**
  * Extracts player name from a line, handling special characters.
  * Returns both the display name (with special chars) and normalized gameUserId.
  */
@@ -92,12 +141,21 @@ function extractPlayerName(line: string): { displayName: string; gameUserId: str
   const nameMatch = cleaned.match(/^([a-z0-9\s`~!@#$%^&*()_\-+=\[\]{}|\\:;"'<>.,?/™©®]+)/i);
   
   if (nameMatch && nameMatch[1].trim().length >= 2) {
-    const displayName = nameMatch[1].trim();
+    let displayName = nameMatch[1].trim();
+    
+    // Normalize the display name to remove OCR artifacts
+    displayName = normalizePlayerName(displayName);
+    
+    // If normalization resulted in empty string, return null
+    if (displayName.length < 2) {
+      return null;
+    }
     
     // Create normalized gameUserId by:
-    // 1. Removing special characters (keep alphanumeric, spaces, underscores)
-    // 2. Converting to lowercase
-    // 3. Replacing spaces with underscores
+    // 1. Normalizing the name first (removes OCR artifacts)
+    // 2. Removing special characters (keep alphanumeric, spaces, underscores)
+    // 3. Converting to lowercase
+    // 4. Replacing spaces with underscores
     // This allows matching across different special character variations
     const gameUserId = displayName
       .toLowerCase()
