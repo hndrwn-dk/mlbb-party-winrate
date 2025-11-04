@@ -24,7 +24,9 @@ export async function DELETE(
 
     // Delete the blob from Vercel Blob storage
     try {
-      await del(upload.url);
+      await del(upload.url, {
+        token: process.env.BLOB_READ_WRITE_TOKEN,
+      });
     } catch (blobError) {
       console.error("Failed to delete blob:", blobError);
       // Continue with database deletion even if blob deletion fails

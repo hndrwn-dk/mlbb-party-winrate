@@ -168,7 +168,7 @@ function extractPlayerFromLine(originalLine: string): Array<{
     const gold = goldMatch ? parseInt(goldMatch[1], 10) : undefined;
     
     // Clean up the name (remove trailing numbers that might be part of OCR error)
-    let cleanName = potentialName.replace(/\d+$/, '').trim();
+    const cleanName = potentialName.replace(/\d+$/, '').trim();
     
     // If name is still valid, extract it
     if (cleanName.length >= 2) {

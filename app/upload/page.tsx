@@ -149,7 +149,7 @@ export default function UploadPage() {
         throw new Error(errorMessage);
       }
 
-      const data = await res.json();
+      await res.json();
       await queryClient.invalidateQueries({ queryKey: ["friends"] });
       await refetchUploads();
       showToast("Match saved successfully!", "success");
