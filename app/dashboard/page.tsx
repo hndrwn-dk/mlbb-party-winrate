@@ -1,9 +1,12 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Bar } from "@/components/bars/Bar";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/components/ui/toast";
 import Link from "next/link";
 
 interface Friend {
@@ -22,10 +25,36 @@ async function fetchFriends(): Promise<Friend[]> {
 }
 
 export default function DashboardPage() {
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
   const { data: friends = [], isLoading } = useQuery({
     queryKey: ["friends"],
     queryFn: fetchFriends,
   });
+
+  const handleDeleteFriend = async (friendId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    setDeletingId(friendId);
+    try {
+      const res = await fetch(`/api/friend/${friendId}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) throw new Error("Failed to delete friend");
+
+      showToast("Friend removed successfully", "success");
+      await queryClient.invalidateQueries({ queryKey: ["friends"] });
+    } catch (error) {
+      console.error("Delete error:", error);
+      showToast("Failed to delete friend", "error");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -114,8 +143,25 @@ export default function DashboardPage() {
             </div>
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {friends.map((friend) => (
-                <Link key={friend.friendId} href={`/friend/${friend.friendId}`}>
-                  <Card className="card-glow border-primary/20 bg-card/50 backdrop-blur-sm hover:border-primary/40 transition-all duration-300 hover:scale-105 cursor-pointer h-full">
+                <Card
+                  key={friend.friendId}
+                  className="card-glow border-primary/20 bg-card/50 backdrop-blur-sm hover:border-primary/40 transition-all duration-300 h-full relative group"
+                >
+                  <Button
+                    onClick={(e) => handleDeleteFriend(friend.friendId, e)}
+                    disabled={deletingId === friend.friendId}
+                    variant="ghost"
+                    size="sm"
+                    className="absolute top-2 right-2 h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                    title="Delete friend"
+                  >
+                    {deletingId === friend.friendId ? (
+                      <span className="text-sm animate-spin">⟳</span>
+                    ) : (
+                      <span className="text-sm font-bold">X</span>
+                    )}
+                  </Button>
+                  <Link href={`/friend/${friend.friendId}`}>
                     <CardHeader className="pb-4">
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
@@ -174,8 +220,8 @@ export default function DashboardPage() {
                         </div>
                       </div>
                     </CardContent>
-                  </Card>
-                </Link>
+                  </Link>
+                </Card>
               ))}
             </div>
           </>
