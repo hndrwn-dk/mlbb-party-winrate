@@ -94,12 +94,14 @@ function normalizePlayerName(name: string): string {
   // Remove stray single uppercase letter before all-caps acronyms
   // Pattern: Single uppercase letter followed immediately by uppercase letters (likely OCR error)
   // Examples: "BATRS" -> "ATRS" (removes stray B), but "BABA" stays (repeating pattern suggests valid)
-  // Heuristic: If it's a single letter + all caps, and removing it gives a valid acronym, remove it
-  // But preserve patterns like "BABA" where the first letter repeats (suggests it's intentional)
-  cleaned = cleaned.replace(/^([A-Z])([A-Z]{2,})(?=\s|$)/, (match, firstLetter, rest) => {
+  // IMPORTANT: Only remove if the acronym is 4+ letters AND first letter doesn't repeat
+  // This prevents removing letters from legitimate 3-4 letter acronyms like "ATRS"
+  cleaned = cleaned.replace(/^([A-Z])([A-Z]{4,})(?=\s|$)/, (match, firstLetter, rest) => {
+    // Only process 5+ letter acronyms (like "BATRS" = B + ATRS = 5 letters total)
+    // For shorter acronyms, be conservative and keep them
     // If the first letter repeats in the rest, it's likely valid (e.g., "BABA")
     if (rest.includes(firstLetter)) {
-      return match; // Keep it
+      return match; // Keep it - first letter repeats (like "BABA")
     }
     // Otherwise, it's likely an OCR error (e.g., "BATRS" -> "ATRS")
     return rest;
@@ -252,8 +254,10 @@ function extractPlayerFromLine(originalLine: string): Array<{
     // Goal: Find the player name before the KDA, handling various OCR formats
     
     // Pattern 1: Look for @ symbol (may have symbols before it like "& ©@")
-    // Handles: "@ PlayerName", "& ©@PlayerName", etc.
-    let nameMatch = beforeKda.match(/[@]\s*([^0-9@\s][^0-9@]{1,28}?)(?=\s*[\d\/\-\:]|\s*$)/i);
+    // Handles: "@ PlayerName", "& ©@ATRS Agatsuma", etc.
+    // Important: Capture the full name after @, ensuring we get "ATRS" not "TRS"
+    // Use greedy match to ensure we capture the full name
+    let nameMatch = beforeKda.match(/[@]\s*([A-Za-z][A-Za-z0-9\s]{2,30})(?=\s*[\d\/\-\:]|\s*$)/i);
     
     // Pattern 2: Look for common symbols (©, ®, &) followed by name
     // Handles: "© PlayerName", "® PlayerName", "& PlayerName", etc.
@@ -265,11 +269,18 @@ function extractPlayerFromLine(originalLine: string): Array<{
       nameMatch = beforeKda.match(/[©®™&@#\s()]*[a-z]{1,2}\s+([A-Z][A-Za-z0-9\s]{2,30})(?=\s*[\d\/\-\:]|\s*$)/);
       
       // If that didn't work, try standard pattern with greedy match
+      // This handles cases like "& ©@ATRS" where we need to capture "ATRS"
+      if (!nameMatch) {
+        // Look for symbols followed by name starting with uppercase letter
+        nameMatch = beforeKda.match(/[©®™&@#\s()]+([A-Z][A-Za-z0-9\s]{2,30})(?=\s*[\d\/\-\:]|\s*$)/);
+      }
+      
+      // Fallback: try pattern that allows optional symbols
       if (!nameMatch) {
         nameMatch = beforeKda.match(/[©®™&@#\s()]*([A-Z][A-Za-z0-9\s]{2,30})(?=\s*[\d\/\-\:]|\s*$)/);
       }
       
-      // Fallback: try with lowercase start too
+      // Last fallback: try with lowercase start too
       if (!nameMatch) {
         nameMatch = beforeKda.match(/[©®™&@#\s()]*([A-Za-z][A-Za-z0-9\s]{2,30})(?=\s*[\d\/\-\:]|\s*$)/);
       }

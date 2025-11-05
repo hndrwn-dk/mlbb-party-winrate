@@ -151,6 +151,17 @@ describe("parseScoreboard", () => {
     }
   });
 
+  it("should extract ATRS correctly from symbols like & ©@ATRS", () => {
+    const ocrText = `& ©@ATRS Agatsuma 3 3 4 8538`;
+    const result = parseScoreboard(`${ocrText}\nDefeat`);
+    expect(result).not.toBeNull();
+    if (result && result.players.length > 0) {
+      const player = result.players[0];
+      expect(player.gameUserId).toBe("atrs_agatsuma");
+      expect(player.displayName).toBe("ATRS Agatsuma");
+    }
+  });
+
   it("should handle real OCR output with multiple symbols", () => {
     const ocrText = `B 26 Ady 19
 a: —— Duration 14:24
