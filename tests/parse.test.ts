@@ -124,17 +124,19 @@ describe("parseScoreboard", () => {
     }
   });
 
-  it("should preserve squad names like BATRS and BABA", () => {
+  it("should remove stray letters from acronyms but preserve legitimate names", () => {
     const testCases = [
       {
         input: "( ri BATRS Agatsuma 10 4 9",
-        expectedGameUserId: "batrs_agatsuma",
-        expectedDisplayName: "BATRS Agatsuma",
+        expectedGameUserId: "atrs_agatsuma",
+        expectedDisplayName: "ATRS Agatsuma",
+        description: "BATRS should become ATRS (B is OCR error)",
       },
       {
         input: "© BABA garou 2 8 18",
         expectedGameUserId: "baba_garou",
         expectedDisplayName: "BABA garou",
+        description: "BABA should stay BABA (legitimate squad name)",
       },
     ];
 

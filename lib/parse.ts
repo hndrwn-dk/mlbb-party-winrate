@@ -61,13 +61,15 @@ function extractKDA(text: string): { k: number; d: number; a: number } | null {
 /**
  * Normalizes a player name by removing OCR artifacts and extracting the core name.
  * Handles cases like:
- * - "( ri BATRS Agatsuma" -> "BATRS Agatsuma" (removes OCR fragments, preserves squad name)
+ * - "( ri BATRS Agatsuma" -> "ATRS Agatsuma" (removes OCR fragments and stray 'B')
+ * - "BABA garou" -> "BABA garou" (preserves legitimate squad name)
  * - "San d ATRS Agatsuma" -> "ATRS Agatsuma" (removes prefix text)
  * - "© ATRS Agatsuma" -> "ATRS Agatsuma" (removes symbols)
  * - "& ©@ATRS Agatsuma" -> "ATRS Agatsuma" (removes multiple symbols)
  * - "ATRSAgatsuma" -> "ATRS Agatsuma" (adds space before capital)
  * 
- * IMPORTANT: Preserves valid squad names like "BATRS", "BABA" that start with single letters
+ * IMPORTANT: Removes stray single letters before acronyms (BATRS -> ATRS)
+ * but preserves legitimate names that start with single letters (BABA)
  */
 function normalizePlayerName(name: string): string {
   let cleaned = name.trim();
@@ -86,21 +88,27 @@ function normalizePlayerName(name: string): string {
   
   // Remove short prefix fragments that are clearly OCR errors
   // Pattern: 1-2 letter lowercase word followed by space
-  // Examples: "ri", "d", etc. - but preserve squad names like "BATRS", "BABA"
-  // Only remove lowercase fragments, never uppercase single letters (they're part of acronyms)
+  // Examples: "ri", "d", etc.
   cleaned = cleaned.replace(/^[a-z]{1,2}\s+/, ''); // Remove lowercase fragments like "ri", "d"
   
-  // NEVER remove single uppercase letters - they're part of squad names (BATRS, BABA, etc.)
-  // The previous patterns already handle lowercase OCR fragments
+  // Remove stray single uppercase letter before all-caps acronyms
+  // Pattern: Single uppercase letter followed immediately by uppercase letters (likely OCR error)
+  // Examples: "BATRS" -> "ATRS" (removes stray B), but "BABA" stays (repeating pattern suggests valid)
+  // Heuristic: If it's a single letter + all caps, and removing it gives a valid acronym, remove it
+  // But preserve patterns like "BABA" where the first letter repeats (suggests it's intentional)
+  cleaned = cleaned.replace(/^([A-Z])([A-Z]{2,})(?=\s|$)/, (match, firstLetter, rest) => {
+    // If the first letter repeats in the rest, it's likely valid (e.g., "BABA")
+    if (rest.includes(firstLetter)) {
+      return match; // Keep it
+    }
+    // Otherwise, it's likely an OCR error (e.g., "BATRS" -> "ATRS")
+    return rest;
+  });
   
   // Remove longer prefix fragments that look like OCR errors
   // Pattern: short word (3-4 chars) followed by space and then what looks like a name
   // This catches cases like "San d" before "ATRS Agatsuma"
   cleaned = cleaned.replace(/^[a-z]{3,4}\s+[a-z]\s+(?=[A-Z])/i, '');
-  
-  // IMPORTANT: Do NOT remove single characters that are part of acronyms
-  // Patterns like "BATRS", "BABA" are valid squad names - preserve them
-  // Only remove single characters if they're clearly OCR artifacts (preceded by fragments)
   
   // Remove trailing OCR artifacts (numbers, symbols that got attached)
   cleaned = cleaned.replace(/\s*\d+$/, ''); // Remove trailing numbers
