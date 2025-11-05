@@ -58,7 +58,21 @@ export default function DashboardPage() {
     }
   };
 
+  const handleCleanupClick = () => {
+    if (friends.length === 0) {
+      showToast("No friends to clean up", "error");
+      return;
+    }
+    setShowCleanupConfirm(true);
+  };
+
   const handleCleanup = async (deleteMatches: boolean = false) => {
+    if (friends.length === 0) {
+      showToast("No friends to clean up", "error");
+      setShowCleanupConfirm(false);
+      return;
+    }
+
     setIsCleaningUp(true);
     try {
       const res = await fetch("/api/cleanup", {
@@ -139,15 +153,15 @@ export default function DashboardPage() {
             >
               Settings
             </Link>
-            {friends.length > 0 && (
-              <Button
-                onClick={() => setShowCleanupConfirm(true)}
-                variant="outline"
-                className="px-6 py-3 border-destructive text-destructive hover:bg-destructive/10 transition-colors"
-              >
-                Clean Up
-              </Button>
-            )}
+            <Button
+              onClick={handleCleanupClick}
+              disabled={isLoading || friends.length === 0}
+              variant="outline"
+              className="px-6 py-3 border-destructive text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title={friends.length === 0 ? "No friends to clean up" : "Clean up all friends and matches"}
+            >
+              Clean Up
+            </Button>
           </nav>
         </div>
 
