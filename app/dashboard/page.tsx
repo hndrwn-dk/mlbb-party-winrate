@@ -131,7 +131,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto p-6 max-w-7xl">
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-8 gap-4">
           <div>
             <h1 className="text-5xl font-bold mb-2 text-foreground tracking-tight">
               MLBB Party Winrate
@@ -140,30 +140,36 @@ export default function DashboardPage() {
               Track your teammates and optimize your duo performance
             </p>
           </div>
-          <nav className="flex gap-3">
+          <nav className="flex flex-col sm:flex-row gap-3">
             <Link
               href="/upload"
-              className="px-6 py-3 bg-primary text-primary-foreground rounded-lg font-semibold hover:bg-primary/90 transition-colors"
+              className="px-6 py-3 bg-primary text-primary-foreground rounded-lg font-semibold hover:bg-primary/90 transition-colors text-center"
             >
               Upload Match
             </Link>
             <Link
               href="/settings"
-              className="px-6 py-3 bg-secondary hover:bg-secondary/80 border border-border rounded-lg transition-all duration-200 hover:scale-105"
+              className="px-6 py-3 bg-secondary hover:bg-secondary/80 border border-border rounded-lg transition-all duration-200 hover:scale-105 text-center"
             >
               Settings
             </Link>
+          </nav>
+        </div>
+
+        {friends.length > 0 && (
+          <div className="mb-6 flex justify-end">
             <Button
               onClick={handleCleanupClick}
               disabled={isLoading || friends.length === 0}
               variant="outline"
-              className="px-6 py-3 border-destructive text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              size="sm"
+              className="border-destructive text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               title={friends.length === 0 ? "No friends to clean up" : "Clean up all friends and matches"}
             >
               Clean Up
             </Button>
-          </nav>
-        </div>
+          </div>
+        )}
 
         {friends.length === 0 ? (
           <Card className="card-glow border-primary/20 bg-card/50 backdrop-blur-sm">
