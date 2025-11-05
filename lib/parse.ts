@@ -273,7 +273,13 @@ function extractPlayerFromLine(originalLine: string): Array<{
         
         if (meaningfulWords.length > 0) {
           const lastWord = meaningfulWords[meaningfulWords.length - 1];
-          nameMatch = [null, lastWord]; // Create a match-like structure
+          // Create a RegExpMatchArray-like structure
+          const matchIndex = beforeKda.lastIndexOf(lastWord);
+          nameMatch = Object.assign([lastWord, lastWord], {
+            index: matchIndex,
+            input: beforeKda,
+            groups: undefined,
+          }) as RegExpMatchArray;
         }
       }
     }
@@ -383,8 +389,6 @@ export function parseScoreboard(rawText: string): ParsedMatch | null {
     const scoreMatch = originalLine.match(scorePattern);
     
     if (victoryMatch) {
-      const score1 = parseInt(victoryMatch[1], 10);
-      const score2 = parseInt(victoryMatch[2], 10);
       // If format is "26 VICTORY 19", first number is winning team
       result = "win";
       break;
