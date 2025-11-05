@@ -114,7 +114,10 @@ export async function POST(request: NextRequest) {
         const similarMatch = findSimilarFriend(
           player.gameUserId,
           player.displayName,
-          friends.map(f => ({ gameUserId: f.gameUserId, displayName: f.displayName || undefined })),
+          friends.map(f => ({ 
+            gameUserId: f.gameUserId, 
+            displayName: f.displayName ?? undefined 
+          })),
           0.65 // Lower threshold to catch more variations
         );
         
