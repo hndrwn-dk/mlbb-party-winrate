@@ -124,6 +124,31 @@ describe("parseScoreboard", () => {
     }
   });
 
+  it("should preserve squad names like BATRS and BABA", () => {
+    const testCases = [
+      {
+        input: "( ri BATRS Agatsuma 10 4 9",
+        expectedGameUserId: "batrs_agatsuma",
+        expectedDisplayName: "BATRS Agatsuma",
+      },
+      {
+        input: "© BABA garou 2 8 18",
+        expectedGameUserId: "baba_garou",
+        expectedDisplayName: "BABA garou",
+      },
+    ];
+
+    for (const testCase of testCases) {
+      const result = parseScoreboard(`${testCase.input}\nDefeat`);
+      expect(result).not.toBeNull();
+      if (result && result.players.length > 0) {
+        const player = result.players[0];
+        expect(player.gameUserId).toBe(testCase.expectedGameUserId);
+        expect(player.displayName).toBe(testCase.expectedDisplayName);
+      }
+    }
+  });
+
   it("should handle real OCR output with multiple symbols", () => {
     const ocrText = `B 26 Ady 19
 a: —— Duration 14:24

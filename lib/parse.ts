@@ -61,46 +61,46 @@ function extractKDA(text: string): { k: number; d: number; a: number } | null {
 /**
  * Normalizes a player name by removing OCR artifacts and extracting the core name.
  * Handles cases like:
- * - "BATRS Agatsuma" -> "ATRS Agatsuma" (removes stray 'B')
+ * - "( ri BATRS Agatsuma" -> "BATRS Agatsuma" (removes OCR fragments, preserves squad name)
  * - "San d ATRS Agatsuma" -> "ATRS Agatsuma" (removes prefix text)
  * - "© ATRS Agatsuma" -> "ATRS Agatsuma" (removes symbols)
  * - "& ©@ATRS Agatsuma" -> "ATRS Agatsuma" (removes multiple symbols)
  * - "ATRSAgatsuma" -> "ATRS Agatsuma" (adds space before capital)
+ * 
+ * IMPORTANT: Preserves valid squad names like "BATRS", "BABA" that start with single letters
  */
 function normalizePlayerName(name: string): string {
   let cleaned = name.trim();
   
   // Remove all leading symbols and whitespace (handles "& ©@", "©", etc.)
   // This is more aggressive to handle concatenated symbols
-  cleaned = cleaned.replace(/^[©®™@#$\s&]+/, '');
+  cleaned = cleaned.replace(/^[©®™@#$\s&()]+/, '');
   
   // Remove any remaining symbol sequences (handles cases like "@ATRS" after first pass)
-  cleaned = cleaned.replace(/^[@#$\s]+/, '');
+  cleaned = cleaned.replace(/^[@#$\s()]+/, '');
   
   // Fix missing spaces first: if we have lowercase/number followed immediately by uppercase,
   // insert a space (e.g., "ATRSAgatsuma" -> "ATRS Agatsuma")
   // This helps with later pattern matching
   cleaned = cleaned.replace(/([a-z0-9])([A-Z])/g, '$1 $2');
   
-  // Remove single character prefix (like "B" before "ATRS")
-  // Pattern: single letter (case-insensitive) followed by space and capital letter
-  cleaned = cleaned.replace(/^[a-z]\s+(?=[A-Z])/i, '');
+  // Remove short prefix fragments that are clearly OCR errors
+  // Pattern: 1-2 letter lowercase word followed by space
+  // Examples: "ri", "d", etc. - but preserve squad names like "BATRS", "BABA"
+  // Only remove lowercase fragments, never uppercase single letters (they're part of acronyms)
+  cleaned = cleaned.replace(/^[a-z]{1,2}\s+/, ''); // Remove lowercase fragments like "ri", "d"
   
-  // Also handle case where single character is directly attached (no space)
-  // Pattern: single lowercase letter followed immediately by uppercase letters
-  // Example: "BATRS" -> "ATRS" (only if removing it leaves a valid name)
-  cleaned = cleaned.replace(/^[a-z](?=[A-Z]{2,})/i, '');
-  
-  // Remove short prefix words that are likely OCR errors
-  // Pattern: 1-2 letter word followed by space, then capital letter
-  // Examples: "ri", "d", etc.
-  cleaned = cleaned.replace(/^[a-z]{1,2}\s+(?=[A-Z])/i, '');
+  // NEVER remove single uppercase letters - they're part of squad names (BATRS, BABA, etc.)
+  // The previous patterns already handle lowercase OCR fragments
   
   // Remove longer prefix fragments that look like OCR errors
   // Pattern: short word (3-4 chars) followed by space and then what looks like a name
   // This catches cases like "San d" before "ATRS Agatsuma"
-  // We're more conservative here - only remove if the remaining part looks like a valid name
   cleaned = cleaned.replace(/^[a-z]{3,4}\s+[a-z]\s+(?=[A-Z])/i, '');
+  
+  // IMPORTANT: Do NOT remove single characters that are part of acronyms
+  // Patterns like "BATRS", "BABA" are valid squad names - preserve them
+  // Only remove single characters if they're clearly OCR artifacts (preceded by fragments)
   
   // Remove trailing OCR artifacts (numbers, symbols that got attached)
   cleaned = cleaned.replace(/\s*\d+$/, ''); // Remove trailing numbers
@@ -249,8 +249,22 @@ function extractPlayerFromLine(originalLine: string): Array<{
     
     // Pattern 2: Look for common symbols (©, ®, &) followed by name
     // Handles: "© PlayerName", "® PlayerName", "& PlayerName", etc.
+    // Also handles OCR fragments like "( ri" before names
     if (!nameMatch) {
-      nameMatch = beforeKda.match(/[©®™&@#\s]*([A-Za-z][A-Za-z0-9\s]{1,28}?)(?=\s*[\d\/\-\:]|\s*$)/);
+      // First try to find name after OCR fragments (like "( ri", "ri", etc.)
+      // Look for pattern: fragment + space + name starting with capital letter
+      // Use greedy match to get full name (BATRS Agatsuma, not just BATRS)
+      nameMatch = beforeKda.match(/[©®™&@#\s()]*[a-z]{1,2}\s+([A-Z][A-Za-z0-9\s]{2,30})(?=\s*[\d\/\-\:]|\s*$)/);
+      
+      // If that didn't work, try standard pattern with greedy match
+      if (!nameMatch) {
+        nameMatch = beforeKda.match(/[©®™&@#\s()]*([A-Z][A-Za-z0-9\s]{2,30})(?=\s*[\d\/\-\:]|\s*$)/);
+      }
+      
+      // Fallback: try with lowercase start too
+      if (!nameMatch) {
+        nameMatch = beforeKda.match(/[©®™&@#\s()]*([A-Za-z][A-Za-z0-9\s]{2,30})(?=\s*[\d\/\-\:]|\s*$)/);
+      }
     }
     
     // Pattern 3: Look for name followed by colon (some formats: "PlayerName: K/D/A")
@@ -286,7 +300,7 @@ function extractPlayerFromLine(originalLine: string): Array<{
     
     if (!nameMatch || !nameMatch[1]) continue;
     
-    const potentialName = nameMatch[1].trim();
+    let potentialName = nameMatch[1].trim();
     if (potentialName.length < 2 || potentialName.length > 30) continue;
     
     // Extract gold value after KDA (4-6 digit number)
@@ -296,12 +310,23 @@ function extractPlayerFromLine(originalLine: string): Array<{
     const goldMatch = afterKda.match(/[\s\.\-:]+(\d{4,6})/);
     const gold = goldMatch ? parseInt(goldMatch[1], 10) : undefined;
     
-    // Clean up the name and normalize it
-    const cleanName = potentialName.replace(/\d+$/, '').trim();
+    // Clean up the name - remove trailing numbers but preserve the full name
+    potentialName = potentialName.replace(/\d+$/, '').trim();
     
-    if (cleanName.length >= 2) {
+    // Ensure we have the full name by checking if it was truncated
+    // Sometimes OCR patterns cut off names - try to get more context
+    if (potentialName.length < 4 && beforeKda.length > potentialName.length + 10) {
+      // Name might be truncated, try to extract a longer version
+      const longerMatch = beforeKda.match(/([A-Z][A-Za-z]{2,}[A-Za-z\s]{0,20}?)(?=\s*[\d\/\-\:]|\s*$)/);
+      if (longerMatch && longerMatch[1].length > potentialName.length) {
+        potentialName = longerMatch[1].trim();
+      }
+    }
+    
+    if (potentialName.length >= 2) {
       // Use extractPlayerName which will normalize OCR artifacts
-      const nameInfo = extractPlayerName(cleanName);
+      // But preserve squad names like BATRS, BABA
+      const nameInfo = extractPlayerName(potentialName);
       
       if (nameInfo) {
         results.push({
