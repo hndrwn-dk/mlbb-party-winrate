@@ -68,33 +68,121 @@ function stringSimilarity(str1: string, str2: string): number {
 
 /**
  * Normalizes a string for comparison by removing special characters and converting to lowercase.
+ * This is more aggressive to handle variations with special characters.
  */
 function normalizeForComparison(str: string): string {
   return str
     .toLowerCase()
-    .replace(/[^a-z0-9]/g, '')
+    .replace(/[^a-z0-9]/g, '') // Remove all special characters
     .trim();
 }
 
 /**
+ * Normalizes a string more aggressively for loose matching.
+ * Removes common variations and focuses on core letters.
+ */
+function normalizeLoose(str: string): string {
+  return str
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '') // Remove special characters
+    .replace(/\d+/g, '') // Remove numbers (they might change)
+    .trim();
+}
+
+/**
+ * Checks if two strings are similar using multiple strategies.
+ * Returns the best similarity score from different matching approaches.
+ */
+function multiStrategySimilarity(str1: string, str2: string): number {
+  const norm1 = normalizeForComparison(str1);
+  const norm2 = normalizeForComparison(str2);
+  
+  // Strategy 1: Standard Levenshtein similarity
+  const levenshteinSim = stringSimilarity(norm1, norm2);
+  
+  // Strategy 2: Loose normalization (ignoring numbers)
+  const loose1 = normalizeLoose(str1);
+  const loose2 = normalizeLoose(str2);
+  const looseSim = stringSimilarity(loose1, loose2);
+  
+  // Strategy 3: Substring matching (one contains the other)
+  const containsMatch = norm1.includes(norm2) || norm2.includes(norm1);
+  let normalizedSubstringSim = 0;
+  if (containsMatch) {
+    const shorter = Math.min(norm1.length, norm2.length);
+    const longer = Math.max(norm1.length, norm2.length);
+    // Higher score if the strings are closer in length
+    normalizedSubstringSim = shorter / longer;
+    // Cap at 0.85 to be slightly lower than exact match
+    normalizedSubstringSim = Math.min(0.85, normalizedSubstringSim);
+  }
+  
+  // Strategy 4: Core name matching (remove common suffixes/prefixes)
+  const core1 = norm1.replace(/^(atrs|baba|rrq|zura)/, '').replace(/(garou|agatsuma)$/, '');
+  const core2 = norm2.replace(/^(atrs|baba|rrq|zura)/, '').replace(/(garou|agatsuma)$/, '');
+  const coreSim = core1.length > 2 && core2.length > 2 
+    ? stringSimilarity(core1, core2) 
+    : 0;
+  
+  // Return the best similarity score
+  return Math.max(levenshteinSim, looseSim, normalizedSubstringSim, coreSim);
+}
+
+/**
  * Finds the most similar string from an array of candidates.
+ * Uses multiple matching strategies to handle name variations and special characters.
  * Returns the candidate and similarity score if similarity is above threshold.
  */
 export function findSimilarString(
   target: string,
   candidates: string[],
-  threshold: number = 0.7
+  threshold: number = 0.65 // Lowered threshold to catch more variations
 ): { match: string; similarity: number } | null {
   const normalizedTarget = normalizeForComparison(target);
   let bestMatch: { match: string; similarity: number } | null = null;
 
   for (const candidate of candidates) {
-    const normalizedCandidate = normalizeForComparison(candidate);
-    const similarity = stringSimilarity(normalizedTarget, normalizedCandidate);
+    // Use multi-strategy similarity for better matching
+    const similarity = multiStrategySimilarity(target, candidate);
 
     if (similarity >= threshold) {
       if (!bestMatch || similarity > bestMatch.similarity) {
         bestMatch = { match: candidate, similarity };
+      }
+    }
+  }
+
+  return bestMatch;
+}
+
+/**
+ * Finds similar strings using both gameUserId and displayName for better matching.
+ * Useful when player names change over time or have special character variations.
+ */
+export function findSimilarFriend(
+  targetGameUserId: string,
+  targetDisplayName: string | undefined,
+  friends: Array<{ gameUserId: string; displayName?: string }>,
+  threshold: number = 0.65
+): { gameUserId: string; similarity: number } | null {
+  let bestMatch: { gameUserId: string; similarity: number } | null = null;
+
+  for (const friend of friends) {
+    // Check gameUserId similarity
+    const gameUserIdSim = multiStrategySimilarity(targetGameUserId, friend.gameUserId);
+    
+    // Check displayName similarity if available
+    let displayNameSim = 0;
+    if (targetDisplayName && friend.displayName) {
+      displayNameSim = multiStrategySimilarity(targetDisplayName, friend.displayName);
+    }
+    
+    // Use the best similarity score (either gameUserId or displayName match)
+    const similarity = Math.max(gameUserIdSim, displayNameSim);
+
+    if (similarity >= threshold) {
+      if (!bestMatch || similarity > bestMatch.similarity) {
+        bestMatch = { gameUserId: friend.gameUserId, similarity };
       }
     }
   }

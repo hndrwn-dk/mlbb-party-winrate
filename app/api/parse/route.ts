@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireUserId } from "@/lib/guard";
 import { parseScoreboard } from "@/lib/parse";
 import { prisma } from "@/lib/prisma";
-import { findSimilarString } from "@/lib/utils";
+import { findSimilarString, findSimilarFriend } from "@/lib/utils";
 import { z } from "zod";
 
 const ParseSchema = z.object({
@@ -107,12 +107,15 @@ export async function POST(request: NextRequest) {
     for (const player of parsed.players) {
       let friend = friendMap.get(player.gameUserId);
       
-      // If exact match not found, try fuzzy matching
+      // If exact match not found, try improved fuzzy matching
+      // This handles name variations, special characters, and changes over time
       if (!friend) {
-        const similarMatch = findSimilarString(
+        // Use improved fuzzy matching that considers both gameUserId and displayName
+        const similarMatch = findSimilarFriend(
           player.gameUserId,
-          friendGameUserIds,
-          0.7 // 70% similarity threshold
+          player.displayName,
+          friends.map(f => ({ gameUserId: f.gameUserId, displayName: f.displayName })),
+          0.65 // Lower threshold to catch more variations
         );
         
         if (similarMatch) {
@@ -133,12 +136,23 @@ export async function POST(request: NextRequest) {
             });
             
             // Update friend's displayName if we have a better one
+            // Prefer names without special characters or with fewer OCR artifacts
             if (player.displayName && player.displayName !== friend.displayName) {
-              // Prefer the name with fewer OCR artifacts (shorter usually means cleaner)
-              const currentLength = friend.displayName?.length || 0;
-              const newLength = player.displayName.length;
-              if (!friend.displayName || newLength < currentLength || 
-                  (newLength === currentLength && player.displayName.length > 0)) {
+              const currentName = friend.displayName || friend.gameUserId;
+              const newName = player.displayName;
+              
+              // Prefer name with fewer special characters
+              const currentSpecialChars = (currentName.match(/[^a-z0-9\s]/gi) || []).length;
+              const newSpecialChars = (newName.match(/[^a-z0-9\s]/gi) || []).length;
+              
+              // Prefer shorter name (fewer OCR artifacts) or name with fewer special chars
+              const shouldUpdate = 
+                !friend.displayName || // No display name yet
+                newSpecialChars < currentSpecialChars || // Fewer special characters
+                (newSpecialChars === currentSpecialChars && newName.length < currentName.length) || // Same special chars, shorter
+                (newSpecialChars === currentSpecialChars && newName.length === currentName.length && newName.length > 0); // Same, but we have a name
+              
+              if (shouldUpdate) {
                 await prisma.friend.update({
                   where: { id: friend.id },
                   data: { displayName: player.displayName },
