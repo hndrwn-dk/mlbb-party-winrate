@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireUserId } from "@/lib/guard";
 import { parseScoreboard } from "@/lib/parse";
 import { prisma } from "@/lib/prisma";
-import { findSimilarString, findSimilarFriend } from "@/lib/utils";
+import { findSimilarFriend } from "@/lib/utils";
 import { z } from "zod";
 
 const ParseSchema = z.object({
@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
         const similarMatch = findSimilarFriend(
           player.gameUserId,
           player.displayName,
-          friends.map(f => ({ gameUserId: f.gameUserId, displayName: f.displayName })),
+          friends.map(f => ({ gameUserId: f.gameUserId, displayName: f.displayName || undefined })),
           0.65 // Lower threshold to catch more variations
         );
         

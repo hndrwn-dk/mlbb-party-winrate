@@ -138,7 +138,6 @@ export function findSimilarString(
   candidates: string[],
   threshold: number = 0.65 // Lowered threshold to catch more variations
 ): { match: string; similarity: number } | null {
-  const normalizedTarget = normalizeForComparison(target);
   let bestMatch: { match: string; similarity: number } | null = null;
 
   for (const candidate of candidates) {
