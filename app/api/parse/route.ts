@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
         
         if (similarMatch) {
           // Found a similar friend, use that instead
-          friend = friendMap.get(similarMatch.match);
+          friend = friendMap.get(similarMatch.gameUserId);
           if (friend) {
             // Update the player's gameUserId to match the existing friend
             // This ensures consistency across matches
